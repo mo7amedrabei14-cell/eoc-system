@@ -1,0 +1,264 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 4,
+  "batchFiles": [
+    {
+      "path": "frontend/src/App.jsx",
+      "language": "javascript",
+      "sizeLines": 199,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/ERCVectorLogo.jsx",
+      "language": "javascript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/Login.jsx",
+      "language": "javascript",
+      "sizeLines": 1410,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/motionAudit.test.js",
+      "language": "javascript",
+      "sizeLines": 214,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/serverHealthCore.test.js",
+      "language": "javascript",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/components/CustomTooltipLayer.jsx",
+      "language": "javascript",
+      "sizeLines": 167,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/components/WorkingToast.jsx",
+      "language": "javascript",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/AnimatedNumber.jsx",
+      "language": "javascript",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/AuthEntryTransition.jsx",
+      "language": "javascript",
+      "sizeLines": 338,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/primitives.jsx",
+      "language": "javascript",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/tokens.js",
+      "language": "javascript",
+      "sizeLines": 131,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/visualTransitions.js",
+      "language": "javascript",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/serverHealth.jsx",
+      "language": "javascript",
+      "sizeLines": 331,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/serverHealthCore.js",
+      "language": "javascript",
+      "sizeLines": 108,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/workingToast.js",
+      "language": "javascript",
+      "sizeLines": 193,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "frontend/src/App.jsx": [
+      "frontend/src/Login.jsx",
+      "frontend/src/components/CustomTooltipLayer.jsx",
+      "frontend/src/components/WorkingToast.jsx",
+      "frontend/src/motion/AuthEntryTransition.jsx",
+      "frontend/src/motion/premiumPageTransitions.css",
+      "frontend/src/motion/visualTransitions.js",
+      "frontend/src/workingToast.js"
+    ],
+    "frontend/src/ERCVectorLogo.jsx": [],
+    "frontend/src/Login.jsx": [
+      "frontend/src/ERCVectorLogo.jsx",
+      "frontend/src/apiBase.js",
+      "frontend/src/login/loginScene.css",
+      "frontend/src/motion/AuthEntryTransition.jsx",
+      "frontend/src/motion/tokens.js",
+      "frontend/src/serverHealth.jsx",
+      "frontend/src/serverHealthCore.js",
+      "frontend/src/workingToast.js"
+    ],
+    "frontend/src/__tests__/motionAudit.test.js": [
+      "frontend/src/motion/visualTransitions.js"
+    ],
+    "frontend/src/__tests__/serverHealthCore.test.js": [
+      "frontend/src/serverHealthCore.js"
+    ],
+    "frontend/src/components/CustomTooltipLayer.jsx": [],
+    "frontend/src/components/WorkingToast.jsx": [
+      "frontend/src/workingToast.js"
+    ],
+    "frontend/src/motion/AnimatedNumber.jsx": [
+      "frontend/src/motion/tokens.js"
+    ],
+    "frontend/src/motion/AuthEntryTransition.jsx": [
+      "frontend/src/ERCVectorLogo.jsx",
+      "frontend/src/motion/authEntryTransition.css"
+    ],
+    "frontend/src/motion/primitives.jsx": [
+      "frontend/src/motion/tokens.js"
+    ],
+    "frontend/src/motion/tokens.js": [],
+    "frontend/src/motion/visualTransitions.js": [],
+    "frontend/src/serverHealth.jsx": [
+      "frontend/src/serverHealthCore.js"
+    ],
+    "frontend/src/serverHealthCore.js": [
+      "frontend/src/apiBase.js"
+    ],
+    "frontend/src/workingToast.js": []
+  },
+  "neighborMap": {
+    "frontend/src/App.jsx": [
+      {
+        "path": "frontend/src/motion/premiumPageTransitions.css",
+        "batchIndex": 31,
+        "symbols": []
+      }
+    ],
+    "frontend/src/ERCVectorLogo.jsx": [
+      {
+        "path": "frontend/src/Dashboard.jsx",
+        "batchIndex": 1,
+        "symbols": [
+          "Dashboard",
+          "WorkingToast",
+          "AppErrorBoundary"
+        ]
+      }
+    ],
+    "frontend/src/Login.jsx": [
+      {
+        "path": "frontend/src/apiBase.js",
+        "batchIndex": 1,
+        "symbols": [
+          "BASE"
+        ]
+      },
+      {
+        "path": "frontend/src/login/loginScene.css",
+        "batchIndex": 31,
+        "symbols": []
+      }
+    ],
+    "frontend/src/motion/AuthEntryTransition.jsx": [
+      {
+        "path": "frontend/src/motion/authEntryTransition.css",
+        "batchIndex": 31,
+        "symbols": []
+      },
+      {
+        "path": "frontend/src/Dashboard.jsx",
+        "batchIndex": 1,
+        "symbols": [
+          "Dashboard",
+          "WorkingToast",
+          "AppErrorBoundary"
+        ]
+      }
+    ],
+    "frontend/src/motion/visualTransitions.js": [
+      {
+        "path": "frontend/src/Dashboard.jsx",
+        "batchIndex": 1,
+        "symbols": [
+          "Dashboard",
+          "WorkingToast",
+          "AppErrorBoundary"
+        ]
+      }
+    ],
+    "frontend/src/serverHealth.jsx": [
+      {
+        "path": "frontend/src/Dashboard.jsx",
+        "batchIndex": 1,
+        "symbols": [
+          "Dashboard",
+          "WorkingToast",
+          "AppErrorBoundary"
+        ]
+      }
+    ],
+    "frontend/src/serverHealthCore.js": [
+      {
+        "path": "frontend/src/apiBase.js",
+        "batchIndex": 1,
+        "symbols": [
+          "BASE"
+        ]
+      }
+    ],
+    "frontend/src/workingToast.js": [
+      {
+        "path": "frontend/src/Dashboard.jsx",
+        "batchIndex": 1,
+        "symbols": [
+          "Dashboard",
+          "WorkingToast",
+          "AppErrorBoundary"
+        ]
+      }
+    ]
+  }
+}

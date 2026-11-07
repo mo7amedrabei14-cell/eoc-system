@@ -1,0 +1,101 @@
+{
+  "nodes": [
+    {
+      "id": "config:.dockerignore",
+      "type": "config",
+      "name": ".dockerignore",
+      "filePath": ".dockerignore",
+      "summary": "Defines exclusions from the Docker build context, controlling which project files are available to image-build COPY steps.",
+      "tags": [
+        "configuration",
+        "containerization",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:Dockerfile",
+      "type": "service",
+      "name": "Dockerfile",
+      "filePath": "Dockerfile",
+      "summary": "Builds a Python 3.9 application image, installs its requirements, copies the application into the container, and starts it with Uvicorn on port 8080.",
+      "tags": [
+        "containerization",
+        "infrastructure",
+        "deployment"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Uses a single-stage build based on a slim Python image."
+    },
+    {
+      "id": "service:Dockerfile:python",
+      "type": "service",
+      "name": "python",
+      "filePath": "Dockerfile",
+      "summary": "Python application container built from the slim Python base image and launched with Uvicorn.",
+      "tags": [
+        "containerization",
+        "application-service",
+        "deployment"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:docker-compose.n1-test.yml",
+      "type": "service",
+      "name": "docker-compose.n1-test.yml",
+      "filePath": "docker-compose.n1-test.yml",
+      "summary": "Defines a PostgreSQL service for N1 testing, including a health check, test-schema initialization, and a loopback-bound port mapping. Credential values are intentionally omitted.",
+      "tags": [
+        "orchestration",
+        "infrastructure",
+        "test",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:docker-compose.n1-test.yml:n1-test-postgres",
+      "type": "service",
+      "name": "n1-test-postgres",
+      "filePath": "docker-compose.n1-test.yml",
+      "summary": "PostgreSQL container configured as the database service for N1 tests, with health monitoring and test-schema initialization.",
+      "tags": [
+        "database",
+        "test",
+        "containerization"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "config:.dockerignore",
+      "target": "service:Dockerfile",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "service:Dockerfile",
+      "target": "service:Dockerfile:python",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "service:Dockerfile",
+      "target": "file:main.py",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "service:docker-compose.n1-test.yml",
+      "target": "service:docker-compose.n1-test.yml:n1-test-postgres",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

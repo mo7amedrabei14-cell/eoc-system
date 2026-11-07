@@ -1,0 +1,200 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 2,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 2,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 2
+    }
+  },
+  "results": [
+    {
+      "path": "migrations/migrations/20261017_wireless_handover.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 57,
+      "nonEmptyLines": 52,
+      "definitions": [
+        {
+          "name": "wireless_inventory",
+          "kind": "table",
+          "fields": [
+            "device_type",
+            "total_count",
+            "updated_by",
+            "updated_at"
+          ],
+          "startLine": 9,
+          "endLine": 14
+        },
+        {
+          "name": "wireless_fixed_text",
+          "kind": "table",
+          "fields": [
+            "id",
+            "content",
+            "updated_by",
+            "updated_at"
+          ],
+          "startLine": 19,
+          "endLine": 24
+        },
+        {
+          "name": "wireless_handovers",
+          "kind": "table",
+          "fields": [
+            "handover_id",
+            "handover_code",
+            "full_name",
+            "employee_number",
+            "national_id",
+            "department",
+            "received_date",
+            "device_type",
+            "device_serial",
+            "task_description",
+            "usage_duration",
+            "execution_area",
+            "row_status",
+            "return_notes",
+            "returned_by",
+            "notes",
+            "created_by",
+            "created_at",
+            "updated_at"
+          ],
+          "startLine": 27,
+          "endLine": 48
+        },
+        {
+          "name": "idx_wireless_handovers_created",
+          "kind": "index",
+          "fields": [],
+          "startLine": 50,
+          "endLine": 50
+        },
+        {
+          "name": "idx_wireless_handovers_date",
+          "kind": "index",
+          "fields": [],
+          "startLine": 52,
+          "endLine": 52
+        },
+        {
+          "name": "idx_wireless_handovers_status",
+          "kind": "index",
+          "fields": [],
+          "startLine": 54,
+          "endLine": 54
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 6
+      }
+    },
+    {
+      "path": "migrations/migrations/20261018_wireless_handover_v2.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 95,
+      "nonEmptyLines": 87,
+      "definitions": [
+        {
+          "name": "wireless_deliveries",
+          "kind": "table",
+          "fields": [
+            "delivery_id",
+            "delivery_code",
+            "full_name",
+            "employee_number",
+            "national_id",
+            "department",
+            "received_date",
+            "task_description",
+            "usage_duration",
+            "execution_area",
+            "general_notes",
+            "status",
+            "returned_at",
+            "returned_by",
+            "return_notes",
+            "created_by",
+            "created_at",
+            "updated_at"
+          ],
+          "startLine": 10,
+          "endLine": 29
+        },
+        {
+          "name": "wireless_delivery_devices",
+          "kind": "table",
+          "fields": [
+            "device_row_id",
+            "delivery_id",
+            "device_type",
+            "device_serial",
+            "accessories",
+            "device_condition",
+            "device_notes",
+            "created_at"
+          ],
+          "startLine": 39,
+          "endLine": 48
+        },
+        {
+          "name": "idx_wireless_deliveries_created",
+          "kind": "index",
+          "fields": [],
+          "startLine": 31,
+          "endLine": 31
+        },
+        {
+          "name": "idx_wireless_deliveries_date",
+          "kind": "index",
+          "fields": [],
+          "startLine": 33,
+          "endLine": 33
+        },
+        {
+          "name": "idx_wireless_deliveries_status",
+          "kind": "index",
+          "fields": [],
+          "startLine": 35,
+          "endLine": 35
+        },
+        {
+          "name": "idx_wireless_devices_delivery",
+          "kind": "index",
+          "fields": [],
+          "startLine": 50,
+          "endLine": 50
+        },
+        {
+          "name": "idx_wireless_devices_type",
+          "kind": "index",
+          "fields": [],
+          "startLine": 52,
+          "endLine": 52
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 7
+      }
+    }
+  ]
+}

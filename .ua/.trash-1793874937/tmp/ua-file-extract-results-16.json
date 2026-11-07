@@ -1,0 +1,113 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 2,
+  "filesSkipped": [
+    "design-delivery/variables.scss"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 2,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 2
+    }
+  },
+  "results": [
+    {
+      "path": "design-delivery/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 37,
+      "nonEmptyLines": 26,
+      "sections": [
+        {
+          "heading": "EOC Red Crescent Command — design delivery",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "One-page implementation report",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Five immediate visual improvements",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "Files changed",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "Integration constraints",
+          "level": 2,
+          "line": 25
+        },
+        {
+          "heading": "Validation status",
+          "level": 2,
+          "line": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": "design-delivery/design-tokens.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 56,
+      "nonEmptyLines": 56,
+      "sections": [
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "version",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "color",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "radius",
+          "level": 1,
+          "line": 38
+        },
+        {
+          "heading": "motion",
+          "level": 1,
+          "line": 44
+        },
+        {
+          "heading": "accessibility",
+          "level": 1,
+          "line": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    }
+  ]
+}

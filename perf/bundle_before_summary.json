@@ -1,0 +1,158 @@
+{
+  "chunks": [
+    {
+      "file": "assets/App-KKyF1FNW.js",
+      "rawBytes": 1749996,
+      "gzipBytes": 319825
+    },
+    {
+      "file": "assets/vendor-CzY76_2m.js",
+      "rawBytes": 1156226,
+      "gzipBytes": 325610
+    },
+    {
+      "file": "assets/index-CWihVeMM.css",
+      "rawBytes": 304867,
+      "gzipBytes": 49144
+    },
+    {
+      "file": "assets/react-vendor-CmLZwYxA.js",
+      "rawBytes": 233614,
+      "gzipBytes": 73772
+    },
+    {
+      "file": "assets/map-vendor-DAKzUuMp.js",
+      "rawBytes": 148812,
+      "gzipBytes": 43072
+    },
+    {
+      "file": "assets/App-CJsu5YTT.css",
+      "rawBytes": 106755,
+      "gzipBytes": 20092
+    },
+    {
+      "file": "assets/map-vendor-CcXJxNtP.css",
+      "rawBytes": 14808,
+      "gzipBytes": 6323
+    },
+    {
+      "file": "assets/index-CBRKr4gE.js",
+      "rawBytes": 9838,
+      "gzipBytes": 4137
+    },
+    {
+      "file": "assets/rolldown-runtime-W7wSyTde.js",
+      "rawBytes": 979,
+      "gzipBytes": 567
+    },
+    {
+      "file": "assets/apiBase-DSGGbg7P.js",
+      "rawBytes": 161,
+      "gzipBytes": 158
+    },
+    {
+      "file": "assets/exceljs.min-BmMNYSu0.js",
+      "rawBytes": 60,
+      "gzipBytes": 78
+    },
+    {
+      "file": "assets/jszip.min-DnCw9i7G.js",
+      "rawBytes": 60,
+      "gzipBytes": 78
+    }
+  ],
+  "topModules": [
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/exceljs/dist/exceljs.min.js",
+      "renderedBytes": 1318525,
+      "gzipBytes": 284378,
+      "brotliBytes": 218356,
+      "chunks": [
+        "assets/exceljs.min-BmMNYSu0.js",
+        "assets/vendor-CzY76_2m.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/Dashboard.jsx",
+      "renderedBytes": 1282503,
+      "gzipBytes": 245237,
+      "brotliBytes": 159682,
+      "chunks": [
+        "assets/App-KKyF1FNW.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/activityMap.js",
+      "renderedBytes": 900509,
+      "gzipBytes": 76097,
+      "brotliBytes": 53538,
+      "chunks": [
+        "assets/App-KKyF1FNW.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/react-dom/cjs/react-dom-client.production.js",
+      "renderedBytes": 453153,
+      "gzipBytes": 84917,
+      "brotliBytes": 69529,
+      "chunks": [
+        "assets/react-vendor-CmLZwYxA.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/leaflet/dist/leaflet-src.js",
+      "renderedBytes": 242212,
+      "gzipBytes": 53994,
+      "brotliBytes": 45391,
+      "chunks": [
+        "assets/map-vendor-DAKzUuMp.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/jszip/dist/jszip.min.js",
+      "renderedBytes": 135627,
+      "gzipBytes": 32172,
+      "brotliBytes": 27701,
+      "chunks": [
+        "assets/jszip.min-DnCw9i7G.js",
+        "assets/vendor-CzY76_2m.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs",
+      "renderedBytes": 90587,
+      "gzipBytes": 22373,
+      "brotliBytes": 19311,
+      "chunks": [
+        "assets/react-vendor-CmLZwYxA.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/Login.jsx",
+      "renderedBytes": 69144,
+      "gzipBytes": 14251,
+      "brotliBytes": 12208,
+      "chunks": [
+        "assets/App-KKyF1FNW.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/i18n.js",
+      "renderedBytes": 53979,
+      "gzipBytes": 15984,
+      "brotliBytes": 13331,
+      "chunks": [
+        "assets/App-KKyF1FNW.js"
+      ]
+    },
+    {
+      "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/SegInputs.jsx",
+      "renderedBytes": 50671,
+      "gzipBytes": 8489,
+      "brotliBytes": 7160,
+      "chunks": [
+        "assets/App-KKyF1FNW.js"
+      ]
+    }
+  ]
+}

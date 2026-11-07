@@ -1,0 +1,218 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 2,
+  "filesSkipped": [
+    "_shot_profile/Default/Local Storage/leveldb/MANIFEST-000001",
+    "_shot_profile/Default/Network/Cookies",
+    "_shot_profile/Default/Network/Cookies-journal",
+    "_shot_profile/Default/Network/NetworkDataMigrated",
+    "_shot_profile/Default/PersistentOriginTrials/LOCK",
+    "_shot_profile/Default/PersistentOriginTrials/LOG",
+    "_shot_profile/Default/Session Storage/CURRENT",
+    "_shot_profile/Default/Session Storage/LOCK",
+    "_shot_profile/Default/Session Storage/LOG",
+    "_shot_profile/Default/Session Storage/MANIFEST-000001",
+    "_shot_profile/Default/Shared Dictionary/cache/index",
+    "_shot_profile/Default/Shared Dictionary/cache/index-dir/the-real-index",
+    "_shot_profile/Default/Shared Dictionary/db",
+    "_shot_profile/Default/Shared Dictionary/db-journal",
+    "_shot_profile/Default/shared_proto_db/CURRENT",
+    "_shot_profile/Default/shared_proto_db/LOCK",
+    "_shot_profile/Default/shared_proto_db/LOG",
+    "_shot_profile/Default/shared_proto_db/MANIFEST-000001",
+    "_shot_profile/Default/shared_proto_db/metadata/CURRENT",
+    "_shot_profile/Default/shared_proto_db/metadata/LOCK",
+    "_shot_profile/Default/shared_proto_db/metadata/LOG",
+    "_shot_profile/Default/shared_proto_db/metadata/MANIFEST-000001",
+    "_shot_profile/DevToolsActivePort"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 2,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 2,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": [
+    {
+      "path": "_test_weather_tie.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 156,
+      "nonEmptyLines": 131,
+      "functions": [
+        {
+          "name": "check",
+          "startLine": 20,
+          "endLine": 23,
+          "params": [
+            "name",
+            "cond",
+            "detail"
+          ]
+        },
+        {
+          "name": "region",
+          "startLine": 26,
+          "endLine": 29,
+          "params": [
+            "fn_name",
+            "span"
+          ]
+        },
+        {
+          "name": "simulate_drop",
+          "startLine": 59,
+          "endLine": 78,
+          "params": [
+            "pending",
+            "sent_by_branch"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "check",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "region",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "simulate_drop",
+          "line": 59,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "check",
+          "callee": "print",
+          "lineNumber": 21
+        },
+        {
+          "caller": "check",
+          "callee": "FAILS.append",
+          "lineNumber": 23
+        },
+        {
+          "caller": "region",
+          "callee": "SRC.index",
+          "lineNumber": 28
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "str",
+          "lineNumber": 62
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "dict",
+          "lineNumber": 62
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "pending.items",
+          "lineNumber": 62
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "sent_by_branch.items",
+          "lineNumber": 64
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "next_group.get",
+          "lineNumber": 65
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "str",
+          "lineNumber": 65
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "dict",
+          "lineNumber": 68
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "sent.items",
+          "lineNumber": 69
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "str",
+          "lineNumber": 70
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "cur.get",
+          "lineNumber": 70
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "str",
+          "lineNumber": 70
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "str",
+          "lineNumber": 74
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "next_group.pop",
+          "lineNumber": 76
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "str",
+          "lineNumber": 76
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "str",
+          "lineNumber": 78
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "dict",
+          "lineNumber": 78
+        },
+        {
+          "caller": "simulate_drop",
+          "callee": "pending.items",
+          "lineNumber": 78
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_undo_blob.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 88,
+      "nonEmptyLines": 84,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

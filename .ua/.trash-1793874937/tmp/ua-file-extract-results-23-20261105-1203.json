@@ -1,0 +1,1957 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 18,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 18,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 18
+    }
+  },
+  "results": [
+    {
+      "path": "perf/lh22_after_blocked_4.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5052,
+      "nonEmptyLines": 5052,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2560
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2617
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2882
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2966
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2967
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2984
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4315
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh22_after_blocked_5.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 4867,
+      "nonEmptyLines": 4867,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2431
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2488
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2753
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2837
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2838
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2855
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4141
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh22_before_blocked_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5196,
+      "nonEmptyLines": 5196,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2698
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2755
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 3020
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 3104
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 3105
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 3122
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4453
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh22_before_blocked_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5219,
+      "nonEmptyLines": 5219,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2721
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2778
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 3043
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 3127
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 3128
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 3145
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4476
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh22_before_blocked_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5131,
+      "nonEmptyLines": 5131,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2644
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2701
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2966
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 3050
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 3051
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 3068
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4399
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh22_before_blocked_4.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5010,
+      "nonEmptyLines": 5010,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2568
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2625
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2890
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2974
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2975
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2992
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4278
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh22_before_blocked_5.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5099,
+      "nonEmptyLines": 5099,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2612
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2669
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2934
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 3018
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 3019
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 3036
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4367
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_after22_login_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5083,
+      "nonEmptyLines": 5083,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 17
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2572
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2629
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2894
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2978
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2979
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2996
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 71
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4342
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_after22_login_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 4938,
+      "nonEmptyLines": 4938,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 17
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2499
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2556
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2821
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2905
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2906
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2923
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 71
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4215
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_after22_login_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5051,
+      "nonEmptyLines": 5051,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 17
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2549
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2606
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2871
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2955
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2956
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2973
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 71
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4310
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_after22_login_4.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 4954,
+      "nonEmptyLines": 4954,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 17
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2470
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2527
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2792
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2876
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2877
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2894
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 71
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4231
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_after22_login_5.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 4915,
+      "nonEmptyLines": 4915,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 17
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2431
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2488
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2753
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2837
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2838
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2855
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 71
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4192
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_before_login_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5043,
+      "nonEmptyLines": 5043,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2603
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2658
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2923
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 3007
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 3008
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 3025
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4311
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_before_login_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5038,
+      "nonEmptyLines": 5038,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2598
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2653
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2918
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 3002
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 3003
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 3020
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4306
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_before_login_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5046,
+      "nonEmptyLines": 5046,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2606
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2661
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2926
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 3010
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 3011
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 3028
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4314
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_before_login_4.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 4970,
+      "nonEmptyLines": 4970,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 17
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2549
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2604
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2869
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2953
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2954
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2971
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 71
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4248
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh_before_login_5.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 4961,
+      "nonEmptyLines": 4961,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 17
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2524
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2579
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2844
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2928
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2929
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2946
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 71
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4232
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/login_diff22.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "width",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "height",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "totalPixels",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "changedPixels",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "changedPercent",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "maxChannelDelta",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "meanChannelDelta",
+          "level": 1,
+          "line": 8
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 20,
+  "batchFiles": [
+    {
+      "path": "frontend/src/App.css",
+      "language": "css",
+      "sizeLines": 184,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/_apt2.txt",
+      "language": "txt",
+      "sizeLines": 121,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "frontend/src/index.css",
+      "language": "css",
+      "sizeLines": 4019,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/missing.txt",
+      "language": "txt",
+      "sizeLines": 10,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "frontend/src/mobile.css",
+      "language": "css",
+      "sizeLines": 619,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/supercharged-tail.css",
+      "language": "css",
+      "sizeLines": 901,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/supercharged.css",
+      "language": "css",
+      "sizeLines": 1128,
+      "fileCategory": "markup"
+    }
+  ],
+  "batchImportData": {
+    "frontend/src/App.css": [],
+    "frontend/src/_apt2.txt": [],
+    "frontend/src/index.css": [],
+    "frontend/src/missing.txt": [],
+    "frontend/src/mobile.css": [],
+    "frontend/src/supercharged-tail.css": [],
+    "frontend/src/supercharged.css": []
+  },
+  "neighborMap": {
+    "frontend/src/index.css": [
+      {
+        "path": "frontend/src/main.jsx",
+        "batchIndex": 9,
+        "symbols": []
+      }
+    ]
+  }
+}

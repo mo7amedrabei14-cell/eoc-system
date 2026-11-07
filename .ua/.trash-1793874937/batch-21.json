@@ -1,0 +1,185 @@
+{
+  "nodes": [
+    {
+      "id": "document:perf/00_stack.md",
+      "type": "document",
+      "name": "00_stack.md",
+      "filePath": "perf/00_stack.md",
+      "summary": "Outlines the project stack, existing CI gates, and local environment constraints.",
+      "tags": ["documentation", "technology-stack", "ci-cd", "development"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/01_baseline.json",
+      "type": "config",
+      "name": "01_baseline.json",
+      "filePath": "perf/01_baseline.json",
+      "summary": "Captures pre-optimization test, backend, frontend, bundle, and dependency-audit measurements for comparison.",
+      "tags": ["performance", "baseline", "audit", "metrics"],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:perf/02_audit_report.md",
+      "type": "document",
+      "name": "02_audit_report.md",
+      "filePath": "perf/02_audit_report.md",
+      "summary": "Documents the pre-optimization performance audit and evidence-based implementation constraints.",
+      "tags": ["documentation", "performance", "audit", "decision-record"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/after22_summary.json",
+      "type": "config",
+      "name": "after22_summary.json",
+      "filePath": "perf/after22_summary.json",
+      "summary": "Aggregates post-change Lighthouse and load-test performance summaries.",
+      "tags": ["performance", "comparison", "lighthouse", "summary"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:perf/asset_headers_before.txt",
+      "type": "document",
+      "name": "asset_headers_before.txt",
+      "filePath": "perf/asset_headers_before.txt",
+      "summary": "Records HTTP response headers for static assets before performance changes.",
+      "tags": ["performance", "http-headers", "assets", "baseline"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/bundle_after22_debug.json",
+      "type": "config",
+      "name": "bundle_after22_debug.json",
+      "filePath": "perf/bundle_after22_debug.json",
+      "summary": "Stores a post-change bundler debug snapshot of generated module structure and build metadata for performance analysis.",
+      "tags": ["performance", "bundle-analysis", "build-system", "debug"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/bundle_before.json",
+      "type": "config",
+      "name": "bundle_before.json",
+      "filePath": "perf/bundle_before.json",
+      "summary": "Stores the pre-change bundler debug snapshot of generated module structure and build metadata as a comparison baseline.",
+      "tags": ["performance", "bundle-analysis", "build-system", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/bundle_before_summary.json",
+      "type": "config",
+      "name": "bundle_before_summary.json",
+      "filePath": "perf/bundle_before_summary.json",
+      "summary": "Summarizes pre-change bundle chunks and their largest contributing modules.",
+      "tags": ["performance", "bundle-analysis", "modules", "baseline"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:perf/depcheck_before.txt",
+      "type": "document",
+      "name": "depcheck_before.txt",
+      "filePath": "perf/depcheck_before.txt",
+      "summary": "Records a pre-change dependency-usage audit report.",
+      "tags": ["documentation", "dependencies", "audit", "baseline"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:perf/deptry_before.txt",
+      "type": "document",
+      "name": "deptry_before.txt",
+      "filePath": "perf/deptry_before.txt",
+      "summary": "Records a pre-change Python dependency audit report.",
+      "tags": ["documentation", "python", "dependencies", "audit"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:perf/frontend_headers_before.txt",
+      "type": "document",
+      "name": "frontend_headers_before.txt",
+      "filePath": "perf/frontend_headers_before.txt",
+      "summary": "Records frontend HTTP response headers before performance changes.",
+      "tags": ["performance", "http-headers", "frontend", "baseline"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_blocked_1.json",
+      "type": "config",
+      "name": "harsh22_after_blocked_1.json",
+      "filePath": "perf/harsh22_after_blocked_1.json",
+      "summary": "Stores one post-change browser performance observation for the blocked scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "blocked-scenario"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_blocked_2.json",
+      "type": "config",
+      "name": "harsh22_after_blocked_2.json",
+      "filePath": "perf/harsh22_after_blocked_2.json",
+      "summary": "Stores a second post-change browser performance observation for the blocked scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "blocked-scenario"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_blocked_3.json",
+      "type": "config",
+      "name": "harsh22_after_blocked_3.json",
+      "filePath": "perf/harsh22_after_blocked_3.json",
+      "summary": "Stores a third post-change browser performance observation for the blocked scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "blocked-scenario"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_ready_1.json",
+      "type": "config",
+      "name": "harsh22_after_ready_1.json",
+      "filePath": "perf/harsh22_after_ready_1.json",
+      "summary": "Stores one post-change browser performance observation for the ready scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "ready-scenario"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_ready_2.json",
+      "type": "config",
+      "name": "harsh22_after_ready_2.json",
+      "filePath": "perf/harsh22_after_ready_2.json",
+      "summary": "Stores a second post-change browser performance observation for the ready scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "ready-scenario"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_ready_3.json",
+      "type": "config",
+      "name": "harsh22_after_ready_3.json",
+      "filePath": "perf/harsh22_after_ready_3.json",
+      "summary": "Stores a third post-change browser performance observation for the ready scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "ready-scenario"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_settled_1.json",
+      "type": "config",
+      "name": "harsh22_after_settled_1.json",
+      "filePath": "perf/harsh22_after_settled_1.json",
+      "summary": "Stores one post-change browser performance observation for the settled scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "settled-scenario"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_settled_2.json",
+      "type": "config",
+      "name": "harsh22_after_settled_2.json",
+      "filePath": "perf/harsh22_after_settled_2.json",
+      "summary": "Stores a second post-change browser performance observation for the settled scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "settled-scenario"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:perf/harsh22_after_settled_3.json",
+      "type": "config",
+      "name": "harsh22_after_settled_3.json",
+      "filePath": "perf/harsh22_after_settled_3.json",
+      "summary": "Stores a third post-change browser performance observation for the settled scenario, including load and transfer metrics.",
+      "tags": ["performance", "load-test", "measurement", "settled-scenario"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

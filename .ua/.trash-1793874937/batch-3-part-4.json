@@ -1,0 +1,1796 @@
+{
+  "nodes": [
+    {
+      "id": "function:main.py:_is_pooled",
+      "type": "function",
+      "name": "_is_pooled",
+      "filePath": "main.py",
+      "lineRange": [
+        143,
+        153
+      ],
+      "summary": "Handles the is pooled operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:ensure_owner_messages_schema",
+      "type": "function",
+      "name": "ensure_owner_messages_schema",
+      "filePath": "main.py",
+      "lineRange": [
+        1139,
+        1178
+      ],
+      "summary": "Handles the ensure owner messages schema operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:health",
+      "type": "function",
+      "name": "health",
+      "filePath": "main.py",
+      "lineRange": [
+        1543,
+        1597
+      ],
+      "summary": "Handles the health operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:sync_notes_marker",
+      "type": "function",
+      "name": "sync_notes_marker",
+      "filePath": "main.py",
+      "lineRange": [
+        2109,
+        2112
+      ],
+      "summary": "Handles the sync notes marker operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:resolve_participant_identities",
+      "type": "function",
+      "name": "resolve_participant_identities",
+      "filePath": "main.py",
+      "lineRange": [
+        2502,
+        2627
+      ],
+      "summary": "Handles the resolve participant identities operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:split_assigned_days",
+      "type": "function",
+      "name": "split_assigned_days",
+      "filePath": "main.py",
+      "lineRange": [
+        2854,
+        2867
+      ],
+      "summary": "Handles the split assigned days operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:compute_working_hours",
+      "type": "function",
+      "name": "compute_working_hours",
+      "filePath": "main.py",
+      "lineRange": [
+        3332,
+        3472
+      ],
+      "summary": "Handles the compute working hours operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:mission_leave",
+      "type": "function",
+      "name": "mission_leave",
+      "filePath": "main.py",
+      "lineRange": [
+        5151,
+        5313
+      ],
+      "summary": "Handles the mission leave operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_mission_exists",
+      "type": "function",
+      "name": "_mission_exists",
+      "filePath": "main.py",
+      "lineRange": [
+        6106,
+        6108
+      ],
+      "summary": "Handles the mission exists operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:delete_local_news",
+      "type": "function",
+      "name": "delete_local_news",
+      "filePath": "main.py",
+      "lineRange": [
+        7024,
+        7049
+      ],
+      "summary": "Handles the delete local news operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:create_global_disaster",
+      "type": "function",
+      "name": "create_global_disaster",
+      "filePath": "main.py",
+      "lineRange": [
+        7450,
+        7490
+      ],
+      "summary": "Handles the create global disaster operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:clear_all_earthquakes",
+      "type": "function",
+      "name": "clear_all_earthquakes",
+      "filePath": "main.py",
+      "lineRange": [
+        7882,
+        7945
+      ],
+      "summary": "Handles the clear all earthquakes operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:get_human_resources",
+      "type": "function",
+      "name": "get_human_resources",
+      "filePath": "main.py",
+      "lineRange": [
+        8577,
+        8830
+      ],
+      "summary": "Handles the get human resources operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:main.py:save_weather_batch",
+      "type": "function",
+      "name": "save_weather_batch",
+      "filePath": "main.py",
+      "lineRange": [
+        9194,
+        9295
+      ],
+      "summary": "Handles the save weather batch operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:get_gov_contacts_log",
+      "type": "function",
+      "name": "get_gov_contacts_log",
+      "filePath": "main.py",
+      "lineRange": [
+        9717,
+        9793
+      ],
+      "summary": "Handles the get gov contacts log operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_eq_intel_fetch_history",
+      "type": "function",
+      "name": "_eq_intel_fetch_history",
+      "filePath": "main.py",
+      "lineRange": [
+        10086,
+        10199
+      ],
+      "summary": "Handles the eq intel fetch history operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_is_serverless_runtime",
+      "type": "function",
+      "name": "_is_serverless_runtime",
+      "filePath": "main.py",
+      "lineRange": [
+        10873,
+        10885
+      ],
+      "summary": "Handles the is serverless runtime operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_catalog_stats",
+      "type": "function",
+      "name": "_eq_catalog_stats",
+      "filePath": "main.py",
+      "lineRange": [
+        11844,
+        11874
+      ],
+      "summary": "Handles the eq catalog stats operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_forecast_trend",
+      "type": "function",
+      "name": "_eq_forecast_trend",
+      "filePath": "main.py",
+      "lineRange": [
+        12434,
+        12449
+      ],
+      "summary": "Handles the eq forecast trend operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_weather_intel_history",
+      "type": "function",
+      "name": "get_weather_intel_history",
+      "filePath": "main.py",
+      "lineRange": [
+        13085,
+        13139
+      ],
+      "summary": "Handles the get weather intel history operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_client_error_fingerprint",
+      "type": "function",
+      "name": "_client_error_fingerprint",
+      "filePath": "main.py",
+      "lineRange": [
+        14103,
+        14107
+      ],
+      "summary": "Handles the client error fingerprint operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_wireless_delivery_dicts",
+      "type": "function",
+      "name": "_wireless_delivery_dicts",
+      "filePath": "main.py",
+      "lineRange": [
+        14446,
+        14465
+      ],
+      "summary": "Handles the wireless delivery dicts operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:delete_wireless_delivery",
+      "type": "function",
+      "name": "delete_wireless_delivery",
+      "filePath": "main.py",
+      "lineRange": [
+        15120,
+        15156
+      ],
+      "summary": "Handles the delete wireless delivery operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:JoinRequest",
+      "type": "class",
+      "name": "JoinRequest",
+      "filePath": "main.py",
+      "lineRange": [
+        1968,
+        1973
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:LocalNewsModel",
+      "type": "class",
+      "name": "LocalNewsModel",
+      "filePath": "main.py",
+      "lineRange": [
+        6751,
+        6806
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:main.py:GovContactExportLogModel",
+      "type": "class",
+      "name": "GovContactExportLogModel",
+      "filePath": "main.py",
+      "lineRange": [
+        9500,
+        9501
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:WirelessDeliveryUpdate",
+      "type": "class",
+      "name": "WirelessDeliveryUpdate",
+      "filePath": "main.py",
+      "lineRange": [
+        14316,
+        14332
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:run_join_leave_scenarios.py",
+      "type": "file",
+      "name": "run_join_leave_scenarios.py",
+      "filePath": "run_join_leave_scenarios.py",
+      "summary": "Runs application verification scenarios for run join leave scenarios.",
+      "tags": [
+        "verification",
+        "scenario",
+        "automation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        38,
+        42
+      ],
+      "summary": "Exercises or verifies the check behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:now_naive",
+      "type": "function",
+      "name": "now_naive",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        45,
+        46
+      ],
+      "summary": "Exercises or verifies the now naive behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:fmt",
+      "type": "function",
+      "name": "fmt",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        49,
+        50
+      ],
+      "summary": "Exercises or verifies the fmt behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:branch_id",
+      "type": "function",
+      "name": "branch_id",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        53,
+        60
+      ],
+      "summary": "Exercises or verifies the branch id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:owner_user_id",
+      "type": "function",
+      "name": "owner_user_id",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        63,
+        77
+      ],
+      "summary": "Exercises or verifies the owner user id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:participant",
+      "type": "function",
+      "name": "participant",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        88,
+        99
+      ],
+      "summary": "Exercises or verifies the participant behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:mission_base",
+      "type": "function",
+      "name": "mission_base",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        102,
+        116
+      ],
+      "summary": "Exercises or verifies the mission base behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:api",
+      "type": "function",
+      "name": "api",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        119,
+        127
+      ],
+      "summary": "Exercises or verifies the api behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:get_mission",
+      "type": "function",
+      "name": "get_mission",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        130,
+        131
+      ],
+      "summary": "Exercises or verifies the get mission behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:find_part",
+      "type": "function",
+      "name": "find_part",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        134,
+        138
+      ],
+      "summary": "Exercises or verifies the find part behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:hr_rows",
+      "type": "function",
+      "name": "hr_rows",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        141,
+        142
+      ],
+      "summary": "Exercises or verifies the hr rows behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:hr_active",
+      "type": "function",
+      "name": "hr_active",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        145,
+        149
+      ],
+      "summary": "Exercises or verifies the hr active behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:server_loop",
+      "type": "function",
+      "name": "server_loop",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        152,
+        153
+      ],
+      "summary": "Exercises or verifies the server loop behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_join_leave_scenarios.py:main_r",
+      "type": "function",
+      "name": "main_r",
+      "filePath": "run_join_leave_scenarios.py",
+      "lineRange": [
+        156,
+        317
+      ],
+      "summary": "Exercises or verifies the main r behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:run_runtime_verify.py",
+      "type": "file",
+      "name": "run_runtime_verify.py",
+      "filePath": "run_runtime_verify.py",
+      "summary": "Runs application verification scenarios for run runtime verify.",
+      "tags": [
+        "verification",
+        "scenario",
+        "automation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:run_runtime_verify.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        33,
+        45
+      ],
+      "summary": "Exercises or verifies the check behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:now_naive",
+      "type": "function",
+      "name": "now_naive",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        48,
+        49
+      ],
+      "summary": "Exercises or verifies the now naive behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:fmt",
+      "type": "function",
+      "name": "fmt",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        52,
+        53
+      ],
+      "summary": "Exercises or verifies the fmt behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:branch_id",
+      "type": "function",
+      "name": "branch_id",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        56,
+        63
+      ],
+      "summary": "Exercises or verifies the branch id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:owner_user_id",
+      "type": "function",
+      "name": "owner_user_id",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        66,
+        80
+      ],
+      "summary": "Exercises or verifies the owner user id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:participant",
+      "type": "function",
+      "name": "participant",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        91,
+        101
+      ],
+      "summary": "Exercises or verifies the participant behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:mission_base",
+      "type": "function",
+      "name": "mission_base",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        104,
+        118
+      ],
+      "summary": "Exercises or verifies the mission base behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:api",
+      "type": "function",
+      "name": "api",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        121,
+        129
+      ],
+      "summary": "Exercises or verifies the api behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:get_mission",
+      "type": "function",
+      "name": "get_mission",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        132,
+        133
+      ],
+      "summary": "Exercises or verifies the get mission behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:find_part",
+      "type": "function",
+      "name": "find_part",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        136,
+        140
+      ],
+      "summary": "Exercises or verifies the find part behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:hr_rows",
+      "type": "function",
+      "name": "hr_rows",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        143,
+        144
+      ],
+      "summary": "Exercises or verifies the hr rows behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:hr_row",
+      "type": "function",
+      "name": "hr_row",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        147,
+        151
+      ],
+      "summary": "Exercises or verifies the hr row behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:server_loop",
+      "type": "function",
+      "name": "server_loop",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        154,
+        155
+      ],
+      "summary": "Exercises or verifies the server loop behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_runtime_verify.py:main_r",
+      "type": "function",
+      "name": "main_r",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        159,
+        348
+      ],
+      "summary": "Exercises or verifies the main r behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:run_runtime_verify.py:cleanup",
+      "type": "function",
+      "name": "cleanup",
+      "filePath": "run_runtime_verify.py",
+      "lineRange": [
+        351,
+        372
+      ],
+      "summary": "Exercises or verifies the cleanup behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_is_pooled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_is_pooled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_owner_messages_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_owner_messages_schema",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:health",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:health",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:sync_notes_marker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:sync_notes_marker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:resolve_participant_identities",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:resolve_participant_identities",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:split_assigned_days",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:split_assigned_days",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:compute_working_hours",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:compute_working_hours",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:mission_leave",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:mission_leave",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_mission_exists",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_mission_exists",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_local_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_local_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_global_disaster",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_global_disaster",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_earthquakes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_earthquakes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_human_resources",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_human_resources",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:save_weather_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:save_weather_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_gov_contacts_log",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_gov_contacts_log",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_fetch_history",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_fetch_history",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_is_serverless_runtime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_is_serverless_runtime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_catalog_stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_catalog_stats",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_forecast_trend",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_forecast_trend",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_history",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_history",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_client_error_fingerprint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_client_error_fingerprint",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_delivery_dicts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_delivery_dicts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_wireless_delivery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_wireless_delivery",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:JoinRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:JoinRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:LocalNewsModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:LocalNewsModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:GovContactExportLogModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:GovContactExportLogModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessDeliveryUpdate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessDeliveryUpdate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:now_naive",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:now_naive",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:fmt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:fmt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:branch_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:branch_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:owner_user_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:owner_user_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:participant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:participant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:mission_base",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:mission_base",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:api",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:api",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:get_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:get_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:find_part",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:find_part",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:hr_rows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:hr_rows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:hr_active",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:hr_active",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:server_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:server_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:main_r",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "function:run_join_leave_scenarios.py:main_r",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:now_naive",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:now_naive",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:fmt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:fmt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:branch_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:branch_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:owner_user_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:owner_user_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:participant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:participant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:mission_base",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:mission_base",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:api",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:api",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:get_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:get_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:find_part",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:find_part",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:hr_rows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:hr_rows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:hr_row",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:hr_row",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:server_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:server_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:main_r",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:main_r",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:cleanup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "function:run_runtime_verify.py:cleanup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:run_join_leave_scenarios.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:run_runtime_verify.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

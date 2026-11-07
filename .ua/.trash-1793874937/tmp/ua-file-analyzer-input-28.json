@@ -1,0 +1,209 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 28,
+  "batchFiles": [
+    {
+      "path": "_shot_profile/Default/Code Cache/js/ff5355fa105f8347_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/index-dir/the-real-index",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/wasm/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/wasm/index-dir/the-real-index",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DIPS",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DIPS-wal",
+      "language": "unknown",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/data_0",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/data_1",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/data_2",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/data_3",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/data_0",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/data_1",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/data_2",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/data_3",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/data_0",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/data_1",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/data_2",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/data_3",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Local Storage/leveldb/CURRENT",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Local Storage/leveldb/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Local Storage/leveldb/LOG",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "_shot_profile/Default/Code Cache/js/ff5355fa105f8347_0": [],
+    "_shot_profile/Default/Code Cache/js/index": [],
+    "_shot_profile/Default/Code Cache/js/index-dir/the-real-index": [],
+    "_shot_profile/Default/Code Cache/wasm/index": [],
+    "_shot_profile/Default/Code Cache/wasm/index-dir/the-real-index": [],
+    "_shot_profile/Default/DIPS": [],
+    "_shot_profile/Default/DIPS-wal": [],
+    "_shot_profile/Default/DawnGraphiteCache/data_0": [],
+    "_shot_profile/Default/DawnGraphiteCache/data_1": [],
+    "_shot_profile/Default/DawnGraphiteCache/data_2": [],
+    "_shot_profile/Default/DawnGraphiteCache/data_3": [],
+    "_shot_profile/Default/DawnGraphiteCache/index": [],
+    "_shot_profile/Default/DawnWebGPUCache/data_0": [],
+    "_shot_profile/Default/DawnWebGPUCache/data_1": [],
+    "_shot_profile/Default/DawnWebGPUCache/data_2": [],
+    "_shot_profile/Default/DawnWebGPUCache/data_3": [],
+    "_shot_profile/Default/DawnWebGPUCache/index": [],
+    "_shot_profile/Default/GPUCache/data_0": [],
+    "_shot_profile/Default/GPUCache/data_1": [],
+    "_shot_profile/Default/GPUCache/data_2": [],
+    "_shot_profile/Default/GPUCache/data_3": [],
+    "_shot_profile/Default/GPUCache/index": [],
+    "_shot_profile/Default/Local Storage/leveldb/CURRENT": [],
+    "_shot_profile/Default/Local Storage/leveldb/LOCK": [],
+    "_shot_profile/Default/Local Storage/leveldb/LOG": []
+  },
+  "neighborMap": {}
+}

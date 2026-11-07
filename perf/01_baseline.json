@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-11-04",
+  "branch": "perf/audit-2026-11",
+  "environment": {
+    "docker": "unavailable: docker command not found",
+    "postgresql": "unavailable: no local PostgreSQL/psql listening on 127.0.0.1:55432",
+    "seed": "not run: local database unavailable and create_test_users.py absent",
+    "productionDatabaseAccessed": false,
+    "frontend": "Vite production build served by npm run preview on 127.0.0.1:4173"
+  },
+  "baselineTests": {
+    "mission_flow_test": {
+      "exitCode": 1,
+      "passed": 0,
+      "failed": 1,
+      "reason": "local database connection timeout",
+      "log": "perf/baseline_mission_flow_test.log"
+    },
+    "run_e2e_scenarios": {
+      "exitCode": 1,
+      "reason": "local database connection timeout in owner_user_id",
+      "log": "perf/baseline_run_e2e_scenarios.log"
+    },
+    "audit_test": {
+      "exitCode": 1,
+      "partAPassed": 13,
+      "partB": "not completed: local database connection timeout",
+      "log": "perf/baseline_audit_test.log"
+    },
+    "_test_sse": {
+      "exitCode": 1,
+      "failed": 3,
+      "passedGuards": [
+        "authentication",
+        "SSE content type",
+        "X-Accel-Buffering: no",
+        "Cache-Control: no-cache",
+        "shared realtime reader",
+        "heartbeat and scheduled close"
+      ],
+      "reason": "three init polling checks returned 503 because local database unavailable",
+      "firstEventMs": null,
+      "medianEventMs": null,
+      "log": "perf/baseline__test_sse.log"
+    },
+    "frontendUnit": {
+      "total": 160,
+      "passed": 158,
+      "failed": 2,
+      "failedNames": [
+        "crest travel starts from the existing login or sidebar logo and preserves route timings",
+        "auth transition loader traces the ERC crescent instead of drawing a circular spinner"
+      ]
+    }
+  },
+  "backend": {
+    "openapiGetCount": 31,
+    "getWithoutPathParams": 27,
+    "getWithPathParams": 4,
+    "locust": "not run: local backend requires unavailable PostgreSQL and test users",
+    "endpoints": [],
+    "queryCounts": "unavailable: pg_stat_statements requires local PostgreSQL",
+    "snapshots": "unavailable: no authenticated local API/database; no synthetic snapshots created"
+  },
+  "frontend": {
+    "login": {
+      "lighthouseMobile": {
+        "runs": [
+          {
+            "run": 1,
+            "lcpMs": 9464.622650000001,
+            "tbtMs": 2093.7294250000004,
+            "cls": 0,
+            "ttfbMs": 17,
+            "requests": 14,
+            "scriptTransferBytes": 770626,
+            "totalTransferBytes": 1144572
+          },
+          {
+            "run": 2,
+            "lcpMs": 10250.8851,
+            "tbtMs": 2090.000000000001,
+            "cls": 0,
+            "ttfbMs": 7,
+            "requests": 14,
+            "scriptTransferBytes": 770626,
+            "totalTransferBytes": 1144572
+          },
+          {
+            "run": 3,
+            "lcpMs": 9236.093850000001,
+            "tbtMs": 1954,
+            "cls": 0,
+            "ttfbMs": 11,
+            "requests": 14,
+            "scriptTransferBytes": 770626,
+            "totalTransferBytes": 1144573
+          },
+          {
+            "run": 4,
+            "lcpMs": 9805.374199999998,
+            "tbtMs": 1475,
+            "cls": 0,
+            "ttfbMs": 4,
+            "requests": 14,
+            "scriptTransferBytes": 770626,
+            "totalTransferBytes": 1144573
+          },
+          {
+            "run": 5,
+            "lcpMs": 8635.32595,
+            "tbtMs": 894,
+            "cls": 0,
+            "ttfbMs": 5,
+            "requests": 14,
+            "scriptTransferBytes": 770626,
+            "totalTransferBytes": 1144572
+          }
+        ],
+        "median": {
+          "lcpMs": 9464.622650000001,
+          "tbtMs": 1954,
+          "cls": 0,
+          "ttfbMs": 7,
+          "requests": 14,
+          "scriptTransferBytes": 770626,
+          "totalTransferBytes": 1144572
+        }
+      },
+      "harsh": {
+        "profile": {
+          "latencyMs": 400,
+          "downloadBytesPerSecond": 51200,
+          "uploadBytesPerSecond": 25600,
+          "cpuThrottle": 6
+        },
+        "runs": [
+          {
+            "url": "http://127.0.0.1:4173/",
+            "loadMs": 10876,
+            "lcp": 0,
+            "requests": 8,
+            "transferKB": 195
+          },
+          {
+            "url": "http://127.0.0.1:4173/",
+            "loadMs": 10177,
+            "lcp": 0,
+            "requests": 8,
+            "transferKB": 195
+          },
+          {
+            "url": "http://127.0.0.1:4173/",
+            "loadMs": 10464,
+            "lcp": 0,
+            "requests": 8,
+            "transferKB": 195
+          }
+        ],
+        "median": {
+          "loadMs": 10464,
+          "lcpMs": 0,
+          "requests": 8,
+          "transferKB": 195
+        }
+      },
+      "screenshot": {
+        "file": "perf/login_before_settled.png",
+        "usableForPixelDiff": true,
+        "interaction": "focus lamp cord, press Enter, wait for visible form, reduced motion, external requests blocked",
+        "initialCapture": "perf/login_before.png"
+      }
+    },
+    "dashboard": null,
+    "missions": null,
+    "largestListOrMap": null,
+    "unavailableReason": "protected pages require unavailable local database and test users"
+  },
+  "bundle": {
+    "chunks": [
+      {
+        "file": "assets/App-KKyF1FNW.js",
+        "rawBytes": 1749996,
+        "gzipBytes": 319825
+      },
+      {
+        "file": "assets/vendor-CzY76_2m.js",
+        "rawBytes": 1156226,
+        "gzipBytes": 325610
+      },
+      {
+        "file": "assets/index-CWihVeMM.css",
+        "rawBytes": 304867,
+        "gzipBytes": 49144
+      },
+      {
+        "file": "assets/react-vendor-CmLZwYxA.js",
+        "rawBytes": 233614,
+        "gzipBytes": 73772
+      },
+      {
+        "file": "assets/map-vendor-DAKzUuMp.js",
+        "rawBytes": 148812,
+        "gzipBytes": 43072
+      },
+      {
+        "file": "assets/App-CJsu5YTT.css",
+        "rawBytes": 106755,
+        "gzipBytes": 20092
+      },
+      {
+        "file": "assets/map-vendor-CcXJxNtP.css",
+        "rawBytes": 14808,
+        "gzipBytes": 6323
+      },
+      {
+        "file": "assets/index-CBRKr4gE.js",
+        "rawBytes": 9838,
+        "gzipBytes": 4137
+      },
+      {
+        "file": "assets/rolldown-runtime-W7wSyTde.js",
+        "rawBytes": 979,
+        "gzipBytes": 567
+      },
+      {
+        "file": "assets/apiBase-DSGGbg7P.js",
+        "rawBytes": 161,
+        "gzipBytes": 158
+      },
+      {
+        "file": "assets/exceljs.min-BmMNYSu0.js",
+        "rawBytes": 60,
+        "gzipBytes": 78
+      },
+      {
+        "file": "assets/jszip.min-DnCw9i7G.js",
+        "rawBytes": 60,
+        "gzipBytes": 78
+      }
+    ],
+    "topModules": [
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/exceljs/dist/exceljs.min.js",
+        "renderedBytes": 1318525,
+        "gzipBytes": 284378,
+        "brotliBytes": 218356,
+        "chunks": [
+          "assets/exceljs.min-BmMNYSu0.js",
+          "assets/vendor-CzY76_2m.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/Dashboard.jsx",
+        "renderedBytes": 1282503,
+        "gzipBytes": 245237,
+        "brotliBytes": 159682,
+        "chunks": [
+          "assets/App-KKyF1FNW.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/activityMap.js",
+        "renderedBytes": 900509,
+        "gzipBytes": 76097,
+        "brotliBytes": 53538,
+        "chunks": [
+          "assets/App-KKyF1FNW.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/react-dom/cjs/react-dom-client.production.js",
+        "renderedBytes": 453153,
+        "gzipBytes": 84917,
+        "brotliBytes": 69529,
+        "chunks": [
+          "assets/react-vendor-CmLZwYxA.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/leaflet/dist/leaflet-src.js",
+        "renderedBytes": 242212,
+        "gzipBytes": 53994,
+        "brotliBytes": 45391,
+        "chunks": [
+          "assets/map-vendor-DAKzUuMp.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/jszip/dist/jszip.min.js",
+        "renderedBytes": 135627,
+        "gzipBytes": 32172,
+        "brotliBytes": 27701,
+        "chunks": [
+          "assets/jszip.min-DnCw9i7G.js",
+          "assets/vendor-CzY76_2m.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs",
+        "renderedBytes": 90587,
+        "gzipBytes": 22373,
+        "brotliBytes": 19311,
+        "chunks": [
+          "assets/react-vendor-CmLZwYxA.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/Login.jsx",
+        "renderedBytes": 69144,
+        "gzipBytes": 14251,
+        "brotliBytes": 12208,
+        "chunks": [
+          "assets/App-KKyF1FNW.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/i18n.js",
+        "renderedBytes": 53979,
+        "gzipBytes": 15984,
+        "brotliBytes": 13331,
+        "chunks": [
+          "assets/App-KKyF1FNW.js"
+        ]
+      },
+      {
+        "id": "C:/Users/mo7am/OneDrive/Work/EOC System/frontend/src/SegInputs.jsx",
+        "renderedBytes": 50671,
+        "gzipBytes": 8489,
+        "brotliBytes": 7160,
+        "chunks": [
+          "assets/App-KKyF1FNW.js"
+        ]
+      }
+    ]
+  },
+  "dependencyAudit": {
+    "deptryExitCode": 1,
+    "depcheckExitCode": 127,
+    "reports": [
+      "perf/deptry_before.txt",
+      "perf/depcheck_before.txt"
+    ],
+    "dependenciesRemoved": []
+  }
+}

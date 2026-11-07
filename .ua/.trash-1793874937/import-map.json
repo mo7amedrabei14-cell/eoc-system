@@ -1,0 +1,837 @@
+{
+  "scriptCompleted": true,
+  "stats": {
+    "filesScanned": 495,
+    "filesWithImports": 118,
+    "totalEdges": 213
+  },
+  "failures": [],
+  "importMap": {
+    ".dockerignore": [],
+    ".freebuff/project-id": [],
+    ".github/workflows/ai_cron.yml": [],
+    ".github/workflows/apify_social_tests.yml": [],
+    ".github/workflows/dashboard-loading-check.yml": [],
+    ".github/workflows/earthquake-schema-guard.yml": [],
+    ".github/workflows/earthquake_cron.yml": [],
+    ".github/workflows/frontend-motion-audit.yml": [],
+    ".github/workflows/n1_query_optimization_tests.yml": [],
+    ".github/workflows/weather_cron.yml": [],
+    "AI_RADAR_APIFY_SOCIAL.md": [],
+    "AI_RADAR_SOCIAL_SOURCES.md": [],
+    "Dockerfile": [],
+    "Eoc Data Base.sql": [],
+    "N1_AUDIT_REPORT.md": [],
+    "PRODUCT.md": [],
+    "README.md": [],
+    "SECURITY_AUDIT.md": [],
+    "SECURITY_VERIFICATION.md": [],
+    "VISUAL_TRANSFORM_PLAN.md": [],
+    "_drive_crash.mjs": [],
+    "_head_dash.jsx": [],
+    "_head_index.css": [],
+    "_jl_db_integration.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "_jl_db_probe.py": [
+      "db.py"
+    ],
+    "_jl_logic_test.py": [
+      "main.py"
+    ],
+    "_make_seed.py": [
+      "auth.py",
+      "db.py"
+    ],
+    "_probe331.py": [
+      "auth.py",
+      "db.py"
+    ],
+    "_probe331_full.py": [
+      "auth.py"
+    ],
+    "_probe_users.py": [
+      "db.py"
+    ],
+    "_shot.mjs": [],
+    "_shot_profile/Default/Cache/Cache_Data/data_0": [],
+    "_shot_profile/Default/Cache/Cache_Data/data_1": [],
+    "_shot_profile/Default/Cache/Cache_Data/data_2": [],
+    "_shot_profile/Default/Cache/Cache_Data/data_3": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000001": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000002": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000003": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000004": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000005": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000006": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000007": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000008": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000009": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000a": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000b": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000c": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000d": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000e": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000f": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000010": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000011": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000012": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000013": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000014": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000015": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000016": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000017": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000018": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000019": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00001a": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00001b": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00001c": [],
+    "_shot_profile/Default/Cache/Cache_Data/index": [],
+    "_shot_profile/Default/Cache/No_Vary_Search/journal.baj": [],
+    "_shot_profile/Default/Cache/No_Vary_Search/snapshot.baf": [],
+    "_shot_profile/Default/Code Cache/js/074be9d46587adb0_0": [],
+    "_shot_profile/Default/Code Cache/js/0b2e0d4a8e062a35_0": [],
+    "_shot_profile/Default/Code Cache/js/0c0ea5d2eee61474_0": [],
+    "_shot_profile/Default/Code Cache/js/12205b61dc909aef_0": [],
+    "_shot_profile/Default/Code Cache/js/1d8855b9036992ab_0": [],
+    "_shot_profile/Default/Code Cache/js/20559001d4cf9068_0": [],
+    "_shot_profile/Default/Code Cache/js/26cc15c6cdfba2dd_0": [],
+    "_shot_profile/Default/Code Cache/js/33e0a944e6a1951c_0": [],
+    "_shot_profile/Default/Code Cache/js/34c41afe0e4d6856_0": [],
+    "_shot_profile/Default/Code Cache/js/38e6a2b332ce13f7_0": [],
+    "_shot_profile/Default/Code Cache/js/3c3d3e2cd44efe11_0": [],
+    "_shot_profile/Default/Code Cache/js/476e697f4d801cdf_0": [],
+    "_shot_profile/Default/Code Cache/js/47e9027527443bdb_0": [],
+    "_shot_profile/Default/Code Cache/js/49ce613c8f5fe922_0": [],
+    "_shot_profile/Default/Code Cache/js/55d96aeffbe066fc_0": [],
+    "_shot_profile/Default/Code Cache/js/568f80ad67cad4da_0": [],
+    "_shot_profile/Default/Code Cache/js/5729a4c3d436fecc_0": [],
+    "_shot_profile/Default/Code Cache/js/6e9348d0e624d722_0": [],
+    "_shot_profile/Default/Code Cache/js/74cdeb79cc6ac7c0_0": [],
+    "_shot_profile/Default/Code Cache/js/7be6358861894a7d_0": [],
+    "_shot_profile/Default/Code Cache/js/7ce3d2392f9452c7_0": [],
+    "_shot_profile/Default/Code Cache/js/7f1237c4b801c4da_0": [],
+    "_shot_profile/Default/Code Cache/js/7fa657661e2beb31_0": [],
+    "_shot_profile/Default/Code Cache/js/8fc2f58fdafbb7b5_0": [],
+    "_shot_profile/Default/Code Cache/js/9a9073055345fb52_0": [],
+    "_shot_profile/Default/Code Cache/js/9b9aad443b9e7dc0_0": [],
+    "_shot_profile/Default/Code Cache/js/ad0eaaf2bc648774_0": [],
+    "_shot_profile/Default/Code Cache/js/afa30a55c1b37597_0": [],
+    "_shot_profile/Default/Code Cache/js/b56e39a1c556c3b6_0": [],
+    "_shot_profile/Default/Code Cache/js/b763c5353448477b_0": [],
+    "_shot_profile/Default/Code Cache/js/cc59708e33c0a9f6_0": [],
+    "_shot_profile/Default/Code Cache/js/dd0d70889624e239_0": [],
+    "_shot_profile/Default/Code Cache/js/e50ef9b991441529_0": [],
+    "_shot_profile/Default/Code Cache/js/eea795006b015923_0": [],
+    "_shot_profile/Default/Code Cache/js/f24fd9dbe113b6f7_0": [],
+    "_shot_profile/Default/Code Cache/js/fa9e00dbd8004d99_0": [],
+    "_shot_profile/Default/Code Cache/js/ff5355fa105f8347_0": [],
+    "_shot_profile/Default/Code Cache/js/index": [],
+    "_shot_profile/Default/Code Cache/js/index-dir/the-real-index": [],
+    "_shot_profile/Default/Code Cache/wasm/index": [],
+    "_shot_profile/Default/Code Cache/wasm/index-dir/the-real-index": [],
+    "_shot_profile/Default/DIPS": [],
+    "_shot_profile/Default/DIPS-wal": [],
+    "_shot_profile/Default/DawnGraphiteCache/data_0": [],
+    "_shot_profile/Default/DawnGraphiteCache/data_1": [],
+    "_shot_profile/Default/DawnGraphiteCache/data_2": [],
+    "_shot_profile/Default/DawnGraphiteCache/data_3": [],
+    "_shot_profile/Default/DawnGraphiteCache/index": [],
+    "_shot_profile/Default/DawnWebGPUCache/data_0": [],
+    "_shot_profile/Default/DawnWebGPUCache/data_1": [],
+    "_shot_profile/Default/DawnWebGPUCache/data_2": [],
+    "_shot_profile/Default/DawnWebGPUCache/data_3": [],
+    "_shot_profile/Default/DawnWebGPUCache/index": [],
+    "_shot_profile/Default/GPUCache/data_0": [],
+    "_shot_profile/Default/GPUCache/data_1": [],
+    "_shot_profile/Default/GPUCache/data_2": [],
+    "_shot_profile/Default/GPUCache/data_3": [],
+    "_shot_profile/Default/GPUCache/index": [],
+    "_shot_profile/Default/Local Storage/leveldb/CURRENT": [],
+    "_shot_profile/Default/Local Storage/leveldb/LOCK": [],
+    "_shot_profile/Default/Local Storage/leveldb/LOG": [],
+    "_shot_profile/Default/Local Storage/leveldb/MANIFEST-000001": [],
+    "_shot_profile/Default/Network/Cookies": [],
+    "_shot_profile/Default/Network/Cookies-journal": [],
+    "_shot_profile/Default/Network/NetworkDataMigrated": [],
+    "_shot_profile/Default/PersistentOriginTrials/LOCK": [],
+    "_shot_profile/Default/PersistentOriginTrials/LOG": [],
+    "_shot_profile/Default/Session Storage/CURRENT": [],
+    "_shot_profile/Default/Session Storage/LOCK": [],
+    "_shot_profile/Default/Session Storage/LOG": [],
+    "_shot_profile/Default/Session Storage/MANIFEST-000001": [],
+    "_shot_profile/Default/Shared Dictionary/cache/index": [],
+    "_shot_profile/Default/Shared Dictionary/cache/index-dir/the-real-index": [],
+    "_shot_profile/Default/Shared Dictionary/db": [],
+    "_shot_profile/Default/Shared Dictionary/db-journal": [],
+    "_shot_profile/Default/shared_proto_db/CURRENT": [],
+    "_shot_profile/Default/shared_proto_db/LOCK": [],
+    "_shot_profile/Default/shared_proto_db/LOG": [],
+    "_shot_profile/Default/shared_proto_db/MANIFEST-000001": [],
+    "_shot_profile/Default/shared_proto_db/metadata/CURRENT": [],
+    "_shot_profile/Default/shared_proto_db/metadata/LOCK": [],
+    "_shot_profile/Default/shared_proto_db/metadata/LOG": [],
+    "_shot_profile/Default/shared_proto_db/metadata/MANIFEST-000001": [],
+    "_shot_profile/DevToolsActivePort": [],
+    "_test_eq_ingest.py": [
+      "main.py"
+    ],
+    "_test_sse.py": [
+      "main.py"
+    ],
+    "_test_weather_tie.py": [],
+    "_undo_blob.mjs": [],
+    "add_constraints.py": [
+      "db.py"
+    ],
+    "add_constraints_v2.py": [
+      "db.py"
+    ],
+    "after.jsx": [],
+    "after.txt": [],
+    "after_class.txt": [],
+    "ai_news_dedupe.py": [],
+    "ai_radar.py": [
+      "ai_news_dedupe.py",
+      "apify_social_sources.py",
+      "incident_validation.py",
+      "social_media_sources.py"
+    ],
+    "apify_social_sources.py": [
+      "incident_validation.py"
+    ],
+    "apply_migration.py": [],
+    "audit.py": [
+      "realtime.py"
+    ],
+    "audit_test.py": [
+      "db.py",
+      "main.py"
+    ],
+    "auth.py": [
+      "db.py"
+    ],
+    "backfill_world_catalog.py": [],
+    "before.jsx": [],
+    "before.txt": [],
+    "before_class.txt": [],
+    "check_catalog.py": [
+      "db.py"
+    ],
+    "check_eq_event_delay.py": [
+      "db.py"
+    ],
+    "check_eq_timing.py": [
+      "db.py"
+    ],
+    "check_mission_routes.py": [],
+    "check_mission_tables.py": [],
+    "check_sources.py": [
+      "db.py"
+    ],
+    "check_syntax.py": [],
+    "clean_eq_audit.py": [
+      "db.py"
+    ],
+    "cleanup_stale_return_status.py": [
+      "main.py"
+    ],
+    "create_idempotency_table.py": [],
+    "db.py": [],
+    "dependencies.py": [
+      "auth.py",
+      "db.py"
+    ],
+    "design-delivery/README.md": [],
+    "design-delivery/css-snippets/README.md": [],
+    "design-delivery/design-tokens.json": [],
+    "design-delivery/variables.scss": [],
+    "diag_ai_models.py": [],
+    "diag_assigned_days_readonly.py": [
+      "db.py"
+    ],
+    "diag_bug2_readonly.py": [
+      "main.py"
+    ],
+    "diag_hr.py": [
+      "db.py",
+      "main.py"
+    ],
+    "diag_hr2.py": [
+      "db.py",
+      "main.py"
+    ],
+    "diag_rbac_readonly.py": [
+      "db.py"
+    ],
+    "diag_route_authz.py": [],
+    "diag_route_drops_readonly.py": [
+      "db.py"
+    ],
+    "diag_route_loss_readonly.py": [
+      "db.py"
+    ],
+    "diag_route_titles_readonly.py": [
+      "db.py"
+    ],
+    "diag_secret_strength.py": [],
+    "docker-compose.n1-test.yml": [],
+    "earthquake_intel.py": [],
+    "files/Eoc System.docx": [],
+    "fix_emsc_links.py": [
+      "db.py"
+    ],
+    "frontend/.perf/baseline.json": [],
+    "frontend/MOBILE_RESPONSIVENESS_AUDIT.md": [],
+    "frontend/README.md": [],
+    "frontend/_unz__flat/[Content_Types].xml": [],
+    "frontend/_unz__flat/_rels/.rels": [],
+    "frontend/_unz__flat/docProps/app.xml": [],
+    "frontend/_unz__flat/docProps/core.xml": [],
+    "frontend/_unz__flat/xl/_rels/workbook.xml.rels": [],
+    "frontend/_unz__flat/xl/metadata.xml": [],
+    "frontend/_unz__flat/xl/styles.xml": [],
+    "frontend/_unz__flat/xl/theme/theme1.xml": [],
+    "frontend/_unz__flat/xl/workbook.xml": [],
+    "frontend/_unz__flat/xl/worksheets/sheet1.xml": [],
+    "frontend/_unz__s/[Content_Types].xml": [],
+    "frontend/_unz__s/_rels/.rels": [],
+    "frontend/_unz__s/docProps/app.xml": [],
+    "frontend/_unz__s/docProps/core.xml": [],
+    "frontend/_unz__s/xl/_rels/workbook.xml.rels": [],
+    "frontend/_unz__s/xl/metadata.xml": [],
+    "frontend/_unz__s/xl/styles.xml": [],
+    "frontend/_unz__s/xl/theme/theme1.xml": [],
+    "frontend/_unz__s/xl/workbook.xml": [],
+    "frontend/_unz__s/xl/worksheets/sheet1.xml": [],
+    "frontend/diag_tdz_order.mjs": [],
+    "frontend/eslint.config.js": [],
+    "frontend/fix-logo-centering.cjs": [],
+    "frontend/fix-logo.bat": [],
+    "frontend/fix-logo.ps1": [],
+    "frontend/index.html": [],
+    "frontend/package.json": [],
+    "frontend/postcss.config.js": [],
+    "frontend/runtime_verify_time.mjs": [],
+    "frontend/src/App.css": [],
+    "frontend/src/App.jsx": [
+      "frontend/src/Login.jsx",
+      "frontend/src/components/CustomTooltipLayer.jsx",
+      "frontend/src/components/WorkingToast.jsx",
+      "frontend/src/motion/AuthEntryTransition.jsx",
+      "frontend/src/motion/premiumPageTransitions.css",
+      "frontend/src/motion/visualTransitions.js",
+      "frontend/src/workingToast.js"
+    ],
+    "frontend/src/Dashboard.jsx": [
+      "frontend/src/ERCVectorLogo.jsx",
+      "frontend/src/SegInputs.jsx",
+      "frontend/src/activityMap.js",
+      "frontend/src/apiBase.js",
+      "frontend/src/components/EocSelect.jsx",
+      "frontend/src/components/OwnerMessages.jsx",
+      "frontend/src/drafts.jsx",
+      "frontend/src/draftsStore.js",
+      "frontend/src/i18n.js",
+      "frontend/src/liveToast.js",
+      "frontend/src/motion/AuthEntryTransition.jsx",
+      "frontend/src/motion/visualTransitions.js",
+      "frontend/src/outbox.js",
+      "frontend/src/participantImport.js",
+      "frontend/src/serverHealth.jsx",
+      "frontend/src/timeutils.js",
+      "frontend/src/weatherIntelFilters.js",
+      "frontend/src/wirelessDateFilter.js",
+      "frontend/src/wirelessPrintTitle.js",
+      "frontend/src/wirelessRecipientLookup.js",
+      "frontend/src/workingToast.js",
+      "frontend/src/workspace.js"
+    ],
+    "frontend/src/Dashboard.jsx.bak": [],
+    "frontend/src/ERCVectorLogo.jsx": [],
+    "frontend/src/Login.jsx": [
+      "frontend/src/ERCVectorLogo.jsx",
+      "frontend/src/apiBase.js",
+      "frontend/src/login/loginScene.css",
+      "frontend/src/motion/AuthEntryTransition.jsx",
+      "frontend/src/motion/tokens.js",
+      "frontend/src/serverHealth.jsx",
+      "frontend/src/serverHealthCore.js",
+      "frontend/src/workingToast.js"
+    ],
+    "frontend/src/RootErrorBoundary.jsx": [
+      "frontend/src/clientErrorReport.js"
+    ],
+    "frontend/src/SegInputs.jsx": [
+      "frontend/src/timeutils.js"
+    ],
+    "frontend/src/__tests__/clientErrorReport.test.js": [
+      "frontend/src/clientErrorReport.js"
+    ],
+    "frontend/src/__tests__/dashboardDataLoading.test.js": [],
+    "frontend/src/__tests__/draftsStore.test.js": [
+      "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "frontend/src/draftsStore.js"
+    ],
+    "frontend/src/__tests__/helpers/fakeBrowser.js": [],
+    "frontend/src/__tests__/liveToast.test.js": [
+      "frontend/src/liveToast.js"
+    ],
+    "frontend/src/__tests__/motionAudit.test.js": [
+      "frontend/src/motion/visualTransitions.js"
+    ],
+    "frontend/src/__tests__/outbox.test.js": [
+      "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "frontend/src/outbox.js"
+    ],
+    "frontend/src/__tests__/ownerMessagesDelivery.test.js": [],
+    "frontend/src/__tests__/participantImport.test.js": [
+      "frontend/src/participantImport.js"
+    ],
+    "frontend/src/__tests__/serverHealthCore.test.js": [
+      "frontend/src/serverHealthCore.js"
+    ],
+    "frontend/src/__tests__/timeutils.test.js": [
+      "frontend/src/timeutils.js"
+    ],
+    "frontend/src/__tests__/weatherIntelFilters.test.js": [
+      "frontend/src/weatherIntelFilters.js"
+    ],
+    "frontend/src/__tests__/wirelessDateFilter.test.js": [
+      "frontend/src/wirelessDateFilter.js"
+    ],
+    "frontend/src/__tests__/wirelessPrintTitle.test.js": [
+      "frontend/src/wirelessPrintTitle.js"
+    ],
+    "frontend/src/__tests__/wirelessRecipientLookup.test.js": [
+      "frontend/src/wirelessRecipientLookup.js"
+    ],
+    "frontend/src/__tests__/wirelessReturnNotesLayout.test.js": [],
+    "frontend/src/__tests__/workingToast.test.js": [],
+    "frontend/src/_apt2.txt": [],
+    "frontend/src/_p2.py": [],
+    "frontend/src/activityMap.js": [],
+    "frontend/src/activityMap.old.js": [],
+    "frontend/src/apiBase.js": [],
+    "frontend/src/build_activity_map.py": [],
+    "frontend/src/clean_membership.py": [],
+    "frontend/src/clientErrorReport.js": [
+      "frontend/src/apiBase.js"
+    ],
+    "frontend/src/components/CustomTooltipLayer.jsx": [],
+    "frontend/src/components/EocSelect.jsx": [],
+    "frontend/src/components/OwnerMessages.jsx": [
+      "frontend/src/apiBase.js"
+    ],
+    "frontend/src/components/WorkingToast.jsx": [
+      "frontend/src/workingToast.js"
+    ],
+    "frontend/src/daily_check.py": [],
+    "frontend/src/drafts.jsx": [
+      "frontend/src/draftsStore.js",
+      "frontend/src/workspace.js"
+    ],
+    "frontend/src/draftsStore.js": [],
+    "frontend/src/fix_modals.py": [],
+    "frontend/src/i18n.js": [],
+    "frontend/src/index.css": [],
+    "frontend/src/liveToast.js": [],
+    "frontend/src/login/loginScene.css": [],
+    "frontend/src/main.jsx": [
+      "frontend/src/RootErrorBoundary.jsx",
+      "frontend/src/clientErrorReport.js",
+      "frontend/src/index.css"
+    ],
+    "frontend/src/missing.txt": [],
+    "frontend/src/mobile.css": [],
+    "frontend/src/motion/AnimatedNumber.jsx": [
+      "frontend/src/motion/tokens.js"
+    ],
+    "frontend/src/motion/AuthEntryTransition.jsx": [
+      "frontend/src/ERCVectorLogo.jsx",
+      "frontend/src/motion/authEntryTransition.css"
+    ],
+    "frontend/src/motion/authEntryTransition.css": [],
+    "frontend/src/motion/premiumPageTransitions.css": [],
+    "frontend/src/motion/primitives.jsx": [
+      "frontend/src/motion/tokens.js"
+    ],
+    "frontend/src/motion/tokens.js": [],
+    "frontend/src/motion/visualTransitions.js": [],
+    "frontend/src/outbox.js": [
+      "frontend/src/workspace.js"
+    ],
+    "frontend/src/participantImport.js": [],
+    "frontend/src/serverHealth.jsx": [
+      "frontend/src/serverHealthCore.js"
+    ],
+    "frontend/src/serverHealthCore.js": [
+      "frontend/src/apiBase.js"
+    ],
+    "frontend/src/supercharged-tail.css": [],
+    "frontend/src/supercharged.css": [],
+    "frontend/src/timeutils.js": [],
+    "frontend/src/weatherIntelFilters.js": [],
+    "frontend/src/wirelessDateFilter.js": [],
+    "frontend/src/wirelessPrintTitle.js": [],
+    "frontend/src/wirelessRecipientLookup.js": [],
+    "frontend/src/workingToast.js": [],
+    "frontend/src/workspace.js": [
+      "frontend/src/apiBase.js"
+    ],
+    "frontend/tailwind.config.js": [],
+    "frontend/vercel.json": [],
+    "frontend/vite.config.js": [],
+    "incident_validation.py": [],
+    "main.py": [
+      "audit.py",
+      "auth.py",
+      "db.py",
+      "realtime.py"
+    ],
+    "main_after.txt": [],
+    "main_before.txt": [],
+    "main_new_func.txt": [],
+    "migrations/20260813_participant_types.sql": [],
+    "migrations/20260904_mission_team_code_realtime.sql": [],
+    "migrations/20260905_hr_active_volunteers_fix.sql": [],
+    "migrations/20260905_participant_identity.sql": [],
+    "migrations/20260905_prevent_users_delete.sql": [],
+    "migrations/20260906_participant_position.sql": [],
+    "migrations/20260907_open_mission_multi_day.sql": [],
+    "migrations/20260907_participation_periods.sql": [],
+    "migrations/20260907_participation_segments.sql": [],
+    "migrations/20260907_unify_engine.sql": [],
+    "migrations/20260909_mission_start_creation_datetime.sql": [],
+    "migrations/20260912_jl_leave_closes_session.sql": [],
+    "migrations/20260914_supervisors_handover.sql": [],
+    "migrations/20260916_weather_module.sql": [],
+    "migrations/20260917_weather_intel.sql": [],
+    "migrations/20260920_add_youth_monitoring_status.sql": [],
+    "migrations/20260920_read_only_missions_role.sql": [],
+    "migrations/20260921_add_participant_notes_column.sql": [],
+    "migrations/20260921_add_volunteer_notes_permission.sql": [],
+    "migrations/20260922_add_staff_view_permission.sql": [],
+    "migrations/20260922_volunteer_room_notes.sql": [],
+    "migrations/20260923_add_youth_review_permission.sql": [],
+    "migrations/20260923_ai_news_observed_at.sql": [],
+    "migrations/20260924_mission_field_operation_status.sql": [],
+    "migrations/20260927_eoc_staff_name_1000.sql": [],
+    "migrations/20260928_participant_branch_rules.sql": [],
+    "migrations/20260929_client_errors.sql": [],
+    "migrations/20260929_workspace_server_side.sql": [],
+    "migrations/migrations/20261017_wireless_handover.sql": [],
+    "migrations/migrations/20261018_wireless_handover_v2.sql": [],
+    "mission_flow_test.py": [
+      "db.py",
+      "main.py"
+    ],
+    "new_class.txt": [],
+    "new_func.txt": [],
+    "openapi_spec.json": [],
+    "output.txt": [],
+    "package.json": [],
+    "perf/00_stack.md": [],
+    "perf/01_baseline.json": [],
+    "perf/02_audit_report.md": [],
+    "perf/after22_summary.json": [],
+    "perf/asset_headers_before.txt": [],
+    "perf/baseline22-dist/assets/App-CJsu5YTT.css": [],
+    "perf/baseline22-dist/assets/App-KKyF1FNW.js": [
+      "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "perf/baseline22-dist/assets/vendor-CzY76_2m.js"
+    ],
+    "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js": [],
+    "perf/baseline22-dist/assets/exceljs.min-BmMNYSu0.js": [
+      "perf/baseline22-dist/assets/vendor-CzY76_2m.js"
+    ],
+    "perf/baseline22-dist/assets/index-CBRKr4gE.js": [
+      "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js"
+    ],
+    "perf/baseline22-dist/assets/index-CWihVeMM.css": [],
+    "perf/baseline22-dist/assets/jszip.min-DnCw9i7G.js": [
+      "perf/baseline22-dist/assets/vendor-CzY76_2m.js"
+    ],
+    "perf/baseline22-dist/assets/map-vendor-CcXJxNtP.css": [],
+    "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js": [
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js"
+    ],
+    "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js": [
+      "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js"
+    ],
+    "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js": [],
+    "perf/baseline22-dist/assets/vendor-CzY76_2m.js": [
+      "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js"
+    ],
+    "perf/baseline22-dist/index.html": [],
+    "perf/bundle_after22_debug.json": [],
+    "perf/bundle_before.json": [],
+    "perf/bundle_before_summary.json": [],
+    "perf/depcheck_before.txt": [],
+    "perf/deptry_before.txt": [],
+    "perf/frontend_headers_before.txt": [],
+    "perf/harsh.mjs": [],
+    "perf/harsh22_after_blocked_1.json": [],
+    "perf/harsh22_after_blocked_2.json": [],
+    "perf/harsh22_after_blocked_3.json": [],
+    "perf/harsh22_after_ready_1.json": [],
+    "perf/harsh22_after_ready_2.json": [],
+    "perf/harsh22_after_ready_3.json": [],
+    "perf/harsh22_after_settled_1.json": [],
+    "perf/harsh22_after_settled_2.json": [],
+    "perf/harsh22_after_settled_3.json": [],
+    "perf/harsh22_before_blocked_1.json": [],
+    "perf/harsh22_before_blocked_2.json": [],
+    "perf/harsh22_before_blocked_3.json": [],
+    "perf/harsh22_before_ready_1.json": [],
+    "perf/harsh22_before_ready_2.json": [],
+    "perf/harsh22_before_ready_3.json": [],
+    "perf/harsh22_before_settled_1.json": [],
+    "perf/harsh22_before_settled_2.json": [],
+    "perf/harsh22_before_settled_3.json": [],
+    "perf/harsh22_trace_after.json": [],
+    "perf/harsh22_trace_before.json": [],
+    "perf/harsh_after22_login_1.json": [],
+    "perf/harsh_after22_login_2.json": [],
+    "perf/harsh_after22_login_3.json": [],
+    "perf/harsh_before_login_1.json": [],
+    "perf/harsh_before_login_2.json": [],
+    "perf/harsh_before_login_3.json": [],
+    "perf/lh22_after_blocked_1.json": [],
+    "perf/lh22_after_blocked_2.json": [],
+    "perf/lh22_after_blocked_3.json": [],
+    "perf/lh22_after_blocked_4.json": [],
+    "perf/lh22_after_blocked_5.json": [],
+    "perf/lh22_before_blocked_1.json": [],
+    "perf/lh22_before_blocked_2.json": [],
+    "perf/lh22_before_blocked_3.json": [],
+    "perf/lh22_before_blocked_4.json": [],
+    "perf/lh22_before_blocked_5.json": [],
+    "perf/lh_after22_login_1.json": [],
+    "perf/lh_after22_login_2.json": [],
+    "perf/lh_after22_login_3.json": [],
+    "perf/lh_after22_login_4.json": [],
+    "perf/lh_after22_login_5.json": [],
+    "perf/lh_before_login_1.json": [],
+    "perf/lh_before_login_2.json": [],
+    "perf/lh_before_login_3.json": [],
+    "perf/lh_before_login_4.json": [],
+    "perf/lh_before_login_5.json": [],
+    "perf/locustfile.py": [],
+    "perf/login_diff22.json": [],
+    "perf/snapshots_before/unavailable.json": [],
+    "plan.md": [],
+    "realtime.py": [],
+    "repro_route_bug.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "requirements.txt": [],
+    "routers/branches.py": [
+      "dependencies.py"
+    ],
+    "routers/missions.py": [
+      "audit.py",
+      "auth.py",
+      "dependencies.py"
+    ],
+    "routers/users.py": [
+      "auth.py",
+      "dependencies.py"
+    ],
+    "routers/volunteers.py": [
+      "dependencies.py"
+    ],
+    "run_diag.py": [],
+    "run_diag2.py": [],
+    "run_draft_lifecycle.py": [
+      "auth.py",
+      "main.py"
+    ],
+    "run_e2e_scenarios.py": [
+      "auth.py",
+      "main.py"
+    ],
+    "run_join_leave_scenarios.py": [
+      "auth.py",
+      "main.py"
+    ],
+    "run_runtime_verify.py": [
+      "auth.py",
+      "main.py"
+    ],
+    "run_verify_hr.py": [
+      "db.py",
+      "main.py"
+    ],
+    "run_verify_new.py": [],
+    "run_verify_segments.py": [
+      "main.py"
+    ],
+    "security_audit_probe.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "seg-probe.html": [],
+    "set_password.py": [
+      "db.py"
+    ],
+    "smoke_test_anthropic.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_gemini.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_gemini_final.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_gemini_v2.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_gemini_v3.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_summary.md": [],
+    "social_media_sources.py": [],
+    "test_ai_news_dedupe.py": [
+      "ai_news_dedupe.py"
+    ],
+    "test_ai_news_repair_flow.py": [
+      "ai_radar.py",
+      "db.py",
+      "main.py"
+    ],
+    "test_ai_radar_resilience.py": [
+      "ai_radar.py"
+    ],
+    "test_api.py": [],
+    "test_apify_social_sources.py": [
+      "apify_social_sources.py"
+    ],
+    "test_bug2_fix.py": [
+      "main.py"
+    ],
+    "test_bug3_fix.py": [
+      "audit.py",
+      "main.py",
+      "realtime.py"
+    ],
+    "test_db.py": [
+      "db.py"
+    ],
+    "test_eq_intel.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "test_eq_log.py": [
+      "db.py"
+    ],
+    "test_eq_schema_bootstrap.py": [],
+    "test_eq_schema_postgres_concurrency.py": [
+      "test_eq_schema_bootstrap.py"
+    ],
+    "test_gemini.py": [
+      "weather_intel.py"
+    ],
+    "test_gemini2.py": [
+      "weather_intel.py"
+    ],
+    "test_gemini3.py": [
+      "weather_intel.py"
+    ],
+    "test_gov_contacts.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "test_health_endpoint.py": [
+      "main.py"
+    ],
+    "test_idempotency_middleware_disconnect.py": [],
+    "test_incident_validation.py": [
+      "ai_radar.py",
+      "incident_validation.py"
+    ],
+    "test_jl_redesign.py": [
+      "main.py"
+    ],
+    "test_mission.py": [
+      "auth.py",
+      "db.py"
+    ],
+    "test_multi_itinerary_hours.py": [
+      "main.py"
+    ],
+    "test_n1_query_optimizations.py": [
+      "backfill_world_catalog.py",
+      "db.py",
+      "fix_emsc_links.py",
+      "main.py",
+      "realtime.py",
+      "weather_backfill.py"
+    ],
+    "test_no_detail_loss.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "test_permissions.py": [
+      "auth.py"
+    ],
+    "test_social_media_sources.py": [
+      "social_media_sources.py"
+    ],
+    "tests/n1_test_schema.sql": [],
+    "tests/test_cleanup_stale_return_status.py": [
+      "cleanup_stale_return_status.py"
+    ],
+    "tests/test_jl_weather_regressions.py": [
+      "main.py",
+      "weather_backfill.py"
+    ],
+    "tools/README.md": [],
+    "tools/check_credential_hygiene.py": [],
+    "tools/tests/test_check_credential_hygiene.py": [
+      "tools/check_credential_hygiene.py"
+    ],
+    "vercel.json": [],
+    "verify_12h.mjs": [
+      "frontend/src/timeutils.js"
+    ],
+    "verify_bug2_fix.py": [
+      "main.py"
+    ],
+    "verify_db_connections.py": [],
+    "verify_field_status_fix.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "verify_mission.py": [
+      "db.py"
+    ],
+    "verify_secrets_history.py": [],
+    "weather_backfill.py": [],
+    "weather_backfill.py.bak": [],
+    "weather_backfill_report.json": [],
+    "weather_extra_backfill.py": [],
+    "weather_intel.py": [],
+    "wrangler.jsonc": [],
+    "تصنيفات مهام.xlsx": [],
+    "تصنيفات مهام_مراجعة.xlsx": [],
+    "خطة التشغيل.docx": [],
+    "فورم المشاركين.xlsx": []
+  }
+}

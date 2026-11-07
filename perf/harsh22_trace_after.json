@@ -1,0 +1,103 @@
+{
+  "loadMs": 6301,
+  "navigation": [
+    {
+      "domContentLoadedEventEnd": 4501.699999988079,
+      "loadEventEnd": 6291.800000011921,
+      "transferSize": 1343,
+      "encodedBodySize": 1043
+    }
+  ],
+  "resources": [
+    {
+      "path": "/assets/index-HGVYWgRP.js",
+      "initiatorType": "script",
+      "startTime": 489.30000001192093,
+      "responseEnd": 1344.5,
+      "duration": 855.1999999880791,
+      "transferSize": 4581,
+      "encodedBodySize": 4281
+    },
+    {
+      "path": "/assets/rolldown-runtime-B1KBAlRl.js",
+      "initiatorType": "other",
+      "startTime": 500.60000002384186,
+      "responseEnd": 1053.8999999761581,
+      "duration": 553.2999999523163,
+      "transferSize": 912,
+      "encodedBodySize": 612
+    },
+    {
+      "path": "/assets/preload-helper-hj3FtsZO.js",
+      "initiatorType": "other",
+      "startTime": 501.69999998807907,
+      "responseEnd": 1078.6000000238419,
+      "duration": 576.9000000357628,
+      "transferSize": 1168,
+      "encodedBodySize": 868
+    },
+    {
+      "path": "/assets/react-vendor-DNNedHJi.js",
+      "initiatorType": "other",
+      "startTime": 505.89999997615814,
+      "responseEnd": 3568,
+      "duration": 3062.100000023842,
+      "transferSize": 72275,
+      "encodedBodySize": 71975
+    },
+    {
+      "path": "/assets/index-CWihVeMM.css",
+      "initiatorType": "link",
+      "startTime": 512.1000000238419,
+      "responseEnd": 3068.399999976158,
+      "duration": 2556.2999999523163,
+      "transferSize": 49444,
+      "encodedBodySize": 49144
+    },
+    {
+      "path": "/assets/App-DJePUMKl.js",
+      "initiatorType": "script",
+      "startTime": 4420.800000011921,
+      "responseEnd": 5910.600000023842,
+      "duration": 1489.800000011921,
+      "transferSize": 14280,
+      "encodedBodySize": 13980
+    },
+    {
+      "path": "/assets/vendor-DBuNarHp.js",
+      "initiatorType": "script",
+      "startTime": 4437.699999988079,
+      "responseEnd": 6760.399999976158,
+      "duration": 2322.699999988079,
+      "transferSize": 48078,
+      "encodedBodySize": 47778
+    },
+    {
+      "path": "/assets/visualTransitions-BAqcbnon.js",
+      "initiatorType": "script",
+      "startTime": 4448.600000023842,
+      "responseEnd": 5648.199999988079,
+      "duration": 1199.5999999642372,
+      "transferSize": 7852,
+      "encodedBodySize": 7552
+    },
+    {
+      "path": "/assets/visualTransitions-CM-unRP5.css",
+      "initiatorType": "link",
+      "startTime": 4460.800000011921,
+      "responseEnd": 5151.199999988079,
+      "duration": 690.3999999761581,
+      "transferSize": 2028,
+      "encodedBodySize": 1728
+    },
+    {
+      "path": "/assets/App-BmvAMwT2.css",
+      "initiatorType": "link",
+      "startTime": 4476.699999988079,
+      "responseEnd": 6176.199999988079,
+      "duration": 1699.5,
+      "transferSize": 19158,
+      "encodedBodySize": 18858
+    }
+  ]
+}

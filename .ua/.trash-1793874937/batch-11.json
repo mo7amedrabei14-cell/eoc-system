@@ -1,0 +1,148 @@
+{
+  "nodes": [
+    {
+      "id": "pipeline:.github/workflows/ai_cron.yml",
+      "type": "pipeline",
+      "name": "ai_cron.yml",
+      "filePath": ".github/workflows/ai_cron.yml",
+      "summary": "Runs the AI Radar scanner on a recurring schedule, installing its Python dependencies and invoking the scanner. Concurrency control prevents overlapping scheduled scans.",
+      "tags": ["ci-cd", "automation", "monitoring", "deployment"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "pipeline:.github/workflows/apify_social_tests.yml",
+      "type": "pipeline",
+      "name": "apify_social_tests.yml",
+      "filePath": ".github/workflows/apify_social_tests.yml",
+      "summary": "Runs offline adapter, social-source, news-deduplication, and AI resilience tests on selected pushes and pull requests. The checks avoid live model calls and paid social-source usage.",
+      "tags": ["ci-cd", "test", "automation", "validation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "pipeline:.github/workflows/dashboard-loading-check.yml",
+      "type": "pipeline",
+      "name": "dashboard-loading-check.yml",
+      "filePath": ".github/workflows/dashboard-loading-check.yml",
+      "summary": "Validates dashboard data-loading changes with the frontend test suite, focused linting, a production build, and a backend Python syntax check.",
+      "tags": ["ci-cd", "test", "frontend", "validation"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "pipeline:.github/workflows/earthquake-schema-guard.yml",
+      "type": "pipeline",
+      "name": "earthquake-schema-guard.yml",
+      "filePath": ".github/workflows/earthquake-schema-guard.yml",
+      "summary": "Runs earthquake schema-bootstrap, PostgreSQL concurrency, and idempotency-disconnect regression tests against a temporary PostgreSQL service.",
+      "tags": ["ci-cd", "test", "database", "validation"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "pipeline:.github/workflows/earthquake_cron.yml",
+      "type": "pipeline",
+      "name": "earthquake_cron.yml",
+      "filePath": ".github/workflows/earthquake_cron.yml",
+      "summary": "Periodically invokes the earthquake intelligence runner, with manual dispatch available for operational runs. It serves as a scheduled continuity mechanism for ingestion.",
+      "tags": ["ci-cd", "automation", "monitoring", "deployment"],
+      "complexity": "simple"
+    },
+    {
+      "id": "pipeline:.github/workflows/frontend-motion-audit.yml",
+      "type": "pipeline",
+      "name": "frontend-motion-audit.yml",
+      "filePath": ".github/workflows/frontend-motion-audit.yml",
+      "summary": "Checks frontend motion changes with the test suite, production build, and focused linting of motion code and regression tests. Repository-wide lint is recorded separately as a non-blocking baseline.",
+      "tags": ["ci-cd", "test", "frontend", "validation"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "pipeline:.github/workflows/n1_query_optimization_tests.yml",
+      "type": "pipeline",
+      "name": "n1_query_optimization_tests.yml",
+      "filePath": ".github/workflows/n1_query_optimization_tests.yml",
+      "summary": "Compiles application modules and runs PostgreSQL-backed query-equivalence, query-count, and related regression suites to guard database performance.",
+      "tags": ["ci-cd", "test", "database", "performance"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "pipeline:.github/workflows/weather_cron.yml",
+      "type": "pipeline",
+      "name": "weather_cron.yml",
+      "filePath": ".github/workflows/weather_cron.yml",
+      "summary": "Runs the weather intelligence runner every two hours, with manual dispatch for on-demand operation.",
+      "tags": ["ci-cd", "automation", "monitoring", "deployment"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "pipeline:.github/workflows/ai_cron.yml",
+      "target": "file:ai_radar.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/apify_social_tests.yml",
+      "target": "file:test_incident_validation.py",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/apify_social_tests.yml",
+      "target": "file:test_apify_social_sources.py",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/apify_social_tests.yml",
+      "target": "file:test_ai_news_dedupe.py",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/apify_social_tests.yml",
+      "target": "file:test_social_media_sources.py",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/apify_social_tests.yml",
+      "target": "file:test_ai_radar_resilience.py",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/frontend-motion-audit.yml",
+      "target": "file:frontend/src/__tests__/motionAudit.test.js",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/n1_query_optimization_tests.yml",
+      "target": "file:test_n1_query_optimizations.py",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/n1_query_optimization_tests.yml",
+      "target": "file:tests/test_jl_weather_regressions.py",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:.github/workflows/weather_cron.yml",
+      "target": "file:weather_intel.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

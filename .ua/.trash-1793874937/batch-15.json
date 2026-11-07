@@ -1,0 +1,86 @@
+{
+  "nodes": [
+    {
+      "id": "document:output.txt",
+      "type": "document",
+      "name": "output.txt",
+      "filePath": "output.txt",
+      "summary": "Captured diagnostic output from a weather pipeline run, showing a Windows console encoding error when the startup message includes Unicode characters.",
+      "tags": ["diagnostic", "python", "unicode-encoding"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "package.json",
+      "summary": "JavaScript package manifest listing the application's archive utility and Cloudflare/OpenNext deployment tooling dependencies.",
+      "tags": ["configuration", "javascript", "dependencies", "deployment"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:plan.md",
+      "type": "document",
+      "name": "plan.md",
+      "filePath": "plan.md",
+      "summary": "Implementation plan for a frontend visual redesign, recording completed design-token, shell, and component work alongside remaining transitions, screen upgrades, responsive, theme, performance, and regression phases.",
+      "tags": ["documentation", "frontend", "design-system", "implementation-plan"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:requirements.txt",
+      "type": "document",
+      "name": "requirements.txt",
+      "filePath": "requirements.txt",
+      "summary": "Python dependency list for the backend, covering web serving, database and authentication support, data processing, and external-service integrations.",
+      "tags": ["documentation", "python", "dependencies"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:seg-probe.html",
+      "type": "file",
+      "name": "seg-probe.html",
+      "filePath": "seg-probe.html",
+      "summary": "Standalone right-to-left visual probe for segmented date and time inputs, showing varied field states and collecting computed input styles in the browser.",
+      "tags": ["markup", "frontend", "ui-probe", "visual-testing"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:smoke_test_summary.md",
+      "type": "document",
+      "name": "smoke_test_summary.md",
+      "filePath": "smoke_test_summary.md",
+      "summary": "Documents verification of a provider-agnostic AI caller, related frontend build checks, and prerequisites for a live weather-assessment smoke test.",
+      "tags": ["documentation", "testing", "ai-integration", "weather"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:vercel.json",
+      "type": "config",
+      "name": "vercel.json",
+      "filePath": "vercel.json",
+      "summary": "Vercel hosting configuration defining the project build, request routing, and response-header rules.",
+      "tags": ["configuration", "deployment", "hosting", "routing"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:weather_backfill_report.json",
+      "type": "config",
+      "name": "weather_backfill_report.json",
+      "filePath": "weather_backfill_report.json",
+      "summary": "Large generated report describing historical weather-archive backfill coverage and processing outcomes, including detailed per-location records; individual record values are intentionally omitted.",
+      "tags": ["data-report", "weather", "backfill", "coverage"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:wrangler.jsonc",
+      "type": "config",
+      "name": "wrangler.jsonc",
+      "filePath": "wrangler.jsonc",
+      "summary": "Cloudflare Wrangler configuration specifying the application entry point, runtime compatibility settings, and static-asset handling.",
+      "tags": ["configuration", "deployment", "cloudflare", "assets"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

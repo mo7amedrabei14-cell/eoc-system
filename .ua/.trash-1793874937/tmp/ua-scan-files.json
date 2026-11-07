@@ -1,0 +1,3015 @@
+{
+  "scriptCompleted": true,
+  "contentDigest": "fa264198203c3b14adabf051d383f98bf2e9b2997a5349553d01ac33be937078",
+  "files": [
+    {
+      "path": ".dockerignore",
+      "language": "unknown",
+      "sizeLines": 17,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".freebuff/project-id",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".github/workflows/ai_cron.yml",
+      "language": "yaml",
+      "sizeLines": 57,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/apify_social_tests.yml",
+      "language": "yaml",
+      "sizeLines": 33,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/dashboard-loading-check.yml",
+      "language": "yaml",
+      "sizeLines": 54,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/earthquake-schema-guard.yml",
+      "language": "yaml",
+      "sizeLines": 67,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/earthquake_cron.yml",
+      "language": "yaml",
+      "sizeLines": 48,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/frontend-motion-audit.yml",
+      "language": "yaml",
+      "sizeLines": 65,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/n1_query_optimization_tests.yml",
+      "language": "yaml",
+      "sizeLines": 82,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/weather_cron.yml",
+      "language": "yaml",
+      "sizeLines": 31,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "AI_RADAR_APIFY_SOCIAL.md",
+      "language": "markdown",
+      "sizeLines": 37,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "AI_RADAR_SOCIAL_SOURCES.md",
+      "language": "markdown",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "Dockerfile",
+      "language": "dockerfile",
+      "sizeLines": 12,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "Eoc Data Base.sql",
+      "language": "sql",
+      "sizeLines": 5,
+      "fileCategory": "data"
+    },
+    {
+      "path": "N1_AUDIT_REPORT.md",
+      "language": "markdown",
+      "sizeLines": 121,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "PRODUCT.md",
+      "language": "markdown",
+      "sizeLines": 71,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 103,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "SECURITY_AUDIT.md",
+      "language": "markdown",
+      "sizeLines": 225,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "SECURITY_VERIFICATION.md",
+      "language": "markdown",
+      "sizeLines": 212,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "VISUAL_TRANSFORM_PLAN.md",
+      "language": "markdown",
+      "sizeLines": 331,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "_drive_crash.mjs",
+      "language": "javascript",
+      "sizeLines": 184,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_head_dash.jsx",
+      "language": "javascript",
+      "sizeLines": 16023,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_head_index.css",
+      "language": "css",
+      "sizeLines": 3976,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "_jl_db_integration.py",
+      "language": "python",
+      "sizeLines": 403,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_jl_db_probe.py",
+      "language": "python",
+      "sizeLines": 52,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_jl_logic_test.py",
+      "language": "python",
+      "sizeLines": 38,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_make_seed.py",
+      "language": "python",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_probe331.py",
+      "language": "python",
+      "sizeLines": 33,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_probe331_full.py",
+      "language": "python",
+      "sizeLines": 24,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_probe_users.py",
+      "language": "python",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot.mjs",
+      "language": "javascript",
+      "sizeLines": 112,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/data_0",
+      "language": "unknown",
+      "sizeLines": 3,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/data_1",
+      "language": "unknown",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/data_2",
+      "language": "unknown",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/data_3",
+      "language": "unknown",
+      "sizeLines": 472,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000001",
+      "language": "unknown",
+      "sizeLines": 1245,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000002",
+      "language": "unknown",
+      "sizeLines": 664,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000003",
+      "language": "unknown",
+      "sizeLines": 768,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000004",
+      "language": "unknown",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000005",
+      "language": "unknown",
+      "sizeLines": 427,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000006",
+      "language": "unknown",
+      "sizeLines": 204,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000007",
+      "language": "unknown",
+      "sizeLines": 14382,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000008",
+      "language": "unknown",
+      "sizeLines": 185,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000009",
+      "language": "unknown",
+      "sizeLines": 2478,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000a",
+      "language": "unknown",
+      "sizeLines": 10221,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000b",
+      "language": "unknown",
+      "sizeLines": 220,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000c",
+      "language": "unknown",
+      "sizeLines": 39989,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000d",
+      "language": "unknown",
+      "sizeLines": 694,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000e",
+      "language": "unknown",
+      "sizeLines": 125,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000f",
+      "language": "unknown",
+      "sizeLines": 269,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000010",
+      "language": "unknown",
+      "sizeLines": 15539,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000011",
+      "language": "unknown",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000012",
+      "language": "unknown",
+      "sizeLines": 426,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000013",
+      "language": "unknown",
+      "sizeLines": 652,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000014",
+      "language": "unknown",
+      "sizeLines": 2179,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000015",
+      "language": "unknown",
+      "sizeLines": 6755,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000016",
+      "language": "unknown",
+      "sizeLines": 307,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000017",
+      "language": "unknown",
+      "sizeLines": 290,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000018",
+      "language": "unknown",
+      "sizeLines": 209,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000019",
+      "language": "unknown",
+      "sizeLines": 689,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00001a",
+      "language": "unknown",
+      "sizeLines": 173,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00001b",
+      "language": "unknown",
+      "sizeLines": 310,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00001c",
+      "language": "unknown",
+      "sizeLines": 38311,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/No_Vary_Search/journal.baj",
+      "language": "baj",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/No_Vary_Search/snapshot.baf",
+      "language": "baf",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/074be9d46587adb0_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/0b2e0d4a8e062a35_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/0c0ea5d2eee61474_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/12205b61dc909aef_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/1d8855b9036992ab_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/20559001d4cf9068_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/26cc15c6cdfba2dd_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/33e0a944e6a1951c_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/34c41afe0e4d6856_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/38e6a2b332ce13f7_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/3c3d3e2cd44efe11_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/476e697f4d801cdf_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/47e9027527443bdb_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/49ce613c8f5fe922_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/55d96aeffbe066fc_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/568f80ad67cad4da_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/5729a4c3d436fecc_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/6e9348d0e624d722_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/74cdeb79cc6ac7c0_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/7be6358861894a7d_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/7ce3d2392f9452c7_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/7f1237c4b801c4da_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/7fa657661e2beb31_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/8fc2f58fdafbb7b5_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/9a9073055345fb52_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/9b9aad443b9e7dc0_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/ad0eaaf2bc648774_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/afa30a55c1b37597_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/b56e39a1c556c3b6_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/b763c5353448477b_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/cc59708e33c0a9f6_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/dd0d70889624e239_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/e50ef9b991441529_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/eea795006b015923_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/f24fd9dbe113b6f7_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/fa9e00dbd8004d99_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/ff5355fa105f8347_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/index-dir/the-real-index",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/wasm/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/wasm/index-dir/the-real-index",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DIPS",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DIPS-wal",
+      "language": "unknown",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/data_0",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/data_1",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/data_2",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/data_3",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnGraphiteCache/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/data_0",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/data_1",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/data_2",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/data_3",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/DawnWebGPUCache/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/data_0",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/data_1",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/data_2",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/data_3",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/GPUCache/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Local Storage/leveldb/CURRENT",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Local Storage/leveldb/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Local Storage/leveldb/LOG",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Local Storage/leveldb/MANIFEST-000001",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Network/Cookies",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Network/Cookies-journal",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Network/NetworkDataMigrated",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/PersistentOriginTrials/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/PersistentOriginTrials/LOG",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Session Storage/CURRENT",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Session Storage/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Session Storage/LOG",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Session Storage/MANIFEST-000001",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Shared Dictionary/cache/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Shared Dictionary/cache/index-dir/the-real-index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Shared Dictionary/db",
+      "language": "unknown",
+      "sizeLines": 13,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Shared Dictionary/db-journal",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/CURRENT",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/LOG",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/MANIFEST-000001",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/metadata/CURRENT",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/metadata/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/metadata/LOG",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/metadata/MANIFEST-000001",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/DevToolsActivePort",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_test_eq_ingest.py",
+      "language": "python",
+      "sizeLines": 257,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_test_sse.py",
+      "language": "python",
+      "sizeLines": 130,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_test_weather_tie.py",
+      "language": "python",
+      "sizeLines": 156,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_undo_blob.mjs",
+      "language": "javascript",
+      "sizeLines": 88,
+      "fileCategory": "code"
+    },
+    {
+      "path": "add_constraints.py",
+      "language": "python",
+      "sizeLines": 188,
+      "fileCategory": "code"
+    },
+    {
+      "path": "add_constraints_v2.py",
+      "language": "python",
+      "sizeLines": 116,
+      "fileCategory": "code"
+    },
+    {
+      "path": "after.jsx",
+      "language": "javascript",
+      "sizeLines": 1951,
+      "fileCategory": "code"
+    },
+    {
+      "path": "after.txt",
+      "language": "txt",
+      "sizeLines": 1343,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "after_class.txt",
+      "language": "txt",
+      "sizeLines": 1525,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "ai_news_dedupe.py",
+      "language": "python",
+      "sizeLines": 205,
+      "fileCategory": "code"
+    },
+    {
+      "path": "ai_radar.py",
+      "language": "python",
+      "sizeLines": 987,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apify_social_sources.py",
+      "language": "python",
+      "sizeLines": 612,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apply_migration.py",
+      "language": "python",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "audit.py",
+      "language": "python",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "audit_test.py",
+      "language": "python",
+      "sizeLines": 371,
+      "fileCategory": "code"
+    },
+    {
+      "path": "auth.py",
+      "language": "python",
+      "sizeLines": 327,
+      "fileCategory": "code"
+    },
+    {
+      "path": "backfill_world_catalog.py",
+      "language": "python",
+      "sizeLines": 208,
+      "fileCategory": "code"
+    },
+    {
+      "path": "before.jsx",
+      "language": "javascript",
+      "sizeLines": 2971,
+      "fileCategory": "code"
+    },
+    {
+      "path": "before.txt",
+      "language": "txt",
+      "sizeLines": 454,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "before_class.txt",
+      "language": "txt",
+      "sizeLines": 346,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "check_catalog.py",
+      "language": "python",
+      "sizeLines": 19,
+      "fileCategory": "code"
+    },
+    {
+      "path": "check_eq_event_delay.py",
+      "language": "python",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "check_eq_timing.py",
+      "language": "python",
+      "sizeLines": 19,
+      "fileCategory": "code"
+    },
+    {
+      "path": "check_mission_routes.py",
+      "language": "python",
+      "sizeLines": 24,
+      "fileCategory": "code"
+    },
+    {
+      "path": "check_mission_tables.py",
+      "language": "python",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "check_sources.py",
+      "language": "python",
+      "sizeLines": 7,
+      "fileCategory": "code"
+    },
+    {
+      "path": "check_syntax.py",
+      "language": "python",
+      "sizeLines": 7,
+      "fileCategory": "code"
+    },
+    {
+      "path": "clean_eq_audit.py",
+      "language": "python",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "cleanup_stale_return_status.py",
+      "language": "python",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "create_idempotency_table.py",
+      "language": "python",
+      "sizeLines": 88,
+      "fileCategory": "code"
+    },
+    {
+      "path": "db.py",
+      "language": "python",
+      "sizeLines": 144,
+      "fileCategory": "code"
+    },
+    {
+      "path": "dependencies.py",
+      "language": "python",
+      "sizeLines": 41,
+      "fileCategory": "code"
+    },
+    {
+      "path": "design-delivery/README.md",
+      "language": "markdown",
+      "sizeLines": 37,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "design-delivery/css-snippets/README.md",
+      "language": "markdown",
+      "sizeLines": 33,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "design-delivery/design-tokens.json",
+      "language": "json",
+      "sizeLines": 56,
+      "fileCategory": "config"
+    },
+    {
+      "path": "design-delivery/variables.scss",
+      "language": "css",
+      "sizeLines": 43,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "diag_ai_models.py",
+      "language": "python",
+      "sizeLines": 107,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_assigned_days_readonly.py",
+      "language": "python",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_bug2_readonly.py",
+      "language": "python",
+      "sizeLines": 141,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_hr.py",
+      "language": "python",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_hr2.py",
+      "language": "python",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_rbac_readonly.py",
+      "language": "python",
+      "sizeLines": 56,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_route_authz.py",
+      "language": "python",
+      "sizeLines": 127,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_route_drops_readonly.py",
+      "language": "python",
+      "sizeLines": 80,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_route_loss_readonly.py",
+      "language": "python",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_route_titles_readonly.py",
+      "language": "python",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "diag_secret_strength.py",
+      "language": "python",
+      "sizeLines": 25,
+      "fileCategory": "code"
+    },
+    {
+      "path": "docker-compose.n1-test.yml",
+      "language": "yaml",
+      "sizeLines": 17,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "earthquake_intel.py",
+      "language": "python",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "files/Eoc System.docx",
+      "language": "docx",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "fix_emsc_links.py",
+      "language": "python",
+      "sizeLines": 63,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/.perf/baseline.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/MOBILE_RESPONSIVENESS_AUDIT.md",
+      "language": "markdown",
+      "sizeLines": 187,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "frontend/README.md",
+      "language": "markdown",
+      "sizeLines": 16,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "frontend/_unz__flat/[Content_Types].xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/_rels/.rels",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/_unz__flat/docProps/app.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/docProps/core.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/xl/_rels/workbook.xml.rels",
+      "language": "rels",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/_unz__flat/xl/metadata.xml",
+      "language": "xml",
+      "sizeLines": 19,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/xl/styles.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/xl/theme/theme1.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/xl/workbook.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/xl/worksheets/sheet1.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/[Content_Types].xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/_rels/.rels",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/_unz__s/docProps/app.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/docProps/core.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/xl/_rels/workbook.xml.rels",
+      "language": "rels",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/_unz__s/xl/metadata.xml",
+      "language": "xml",
+      "sizeLines": 19,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/xl/styles.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/xl/theme/theme1.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/xl/workbook.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/xl/worksheets/sheet1.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/diag_tdz_order.mjs",
+      "language": "javascript",
+      "sizeLines": 97,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/eslint.config.js",
+      "language": "javascript",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/fix-logo-centering.cjs",
+      "language": "javascript",
+      "sizeLines": 167,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/fix-logo.bat",
+      "language": "batch",
+      "sizeLines": 2,
+      "fileCategory": "script"
+    },
+    {
+      "path": "frontend/fix-logo.ps1",
+      "language": "powershell",
+      "sizeLines": 209,
+      "fileCategory": "script"
+    },
+    {
+      "path": "frontend/index.html",
+      "language": "html",
+      "sizeLines": 27,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/package.json",
+      "language": "json",
+      "sizeLines": 38,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/postcss.config.js",
+      "language": "javascript",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/runtime_verify_time.mjs",
+      "language": "javascript",
+      "sizeLines": 227,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/App.css",
+      "language": "css",
+      "sizeLines": 184,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/App.jsx",
+      "language": "javascript",
+      "sizeLines": 199,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/Dashboard.jsx",
+      "language": "javascript",
+      "sizeLines": 18687,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/Dashboard.jsx.bak",
+      "language": "bak",
+      "sizeLines": 12489,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/ERCVectorLogo.jsx",
+      "language": "javascript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/Login.jsx",
+      "language": "javascript",
+      "sizeLines": 1410,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/RootErrorBoundary.jsx",
+      "language": "javascript",
+      "sizeLines": 54,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/SegInputs.jsx",
+      "language": "javascript",
+      "sizeLines": 1177,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/clientErrorReport.test.js",
+      "language": "javascript",
+      "sizeLines": 311,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/dashboardDataLoading.test.js",
+      "language": "javascript",
+      "sizeLines": 46,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/draftsStore.test.js",
+      "language": "javascript",
+      "sizeLines": 184,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "language": "javascript",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/liveToast.test.js",
+      "language": "javascript",
+      "sizeLines": 224,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/motionAudit.test.js",
+      "language": "javascript",
+      "sizeLines": 214,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/outbox.test.js",
+      "language": "javascript",
+      "sizeLines": 189,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/ownerMessagesDelivery.test.js",
+      "language": "javascript",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/participantImport.test.js",
+      "language": "javascript",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/serverHealthCore.test.js",
+      "language": "javascript",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/timeutils.test.js",
+      "language": "javascript",
+      "sizeLines": 52,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/weatherIntelFilters.test.js",
+      "language": "javascript",
+      "sizeLines": 294,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessDateFilter.test.js",
+      "language": "javascript",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessPrintTitle.test.js",
+      "language": "javascript",
+      "sizeLines": 50,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessRecipientLookup.test.js",
+      "language": "javascript",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessReturnNotesLayout.test.js",
+      "language": "javascript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/workingToast.test.js",
+      "language": "javascript",
+      "sizeLines": 111,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/_apt2.txt",
+      "language": "txt",
+      "sizeLines": 121,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "frontend/src/_p2.py",
+      "language": "python",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/activityMap.js",
+      "language": "javascript",
+      "sizeLines": 5016,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/activityMap.old.js",
+      "language": "javascript",
+      "sizeLines": 812,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/apiBase.js",
+      "language": "javascript",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/build_activity_map.py",
+      "language": "python",
+      "sizeLines": 253,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/clean_membership.py",
+      "language": "python",
+      "sizeLines": 135,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/clientErrorReport.js",
+      "language": "javascript",
+      "sizeLines": 383,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/components/CustomTooltipLayer.jsx",
+      "language": "javascript",
+      "sizeLines": 167,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/components/EocSelect.jsx",
+      "language": "javascript",
+      "sizeLines": 351,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/components/OwnerMessages.jsx",
+      "language": "javascript",
+      "sizeLines": 280,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/components/WorkingToast.jsx",
+      "language": "javascript",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/daily_check.py",
+      "language": "python",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/drafts.jsx",
+      "language": "javascript",
+      "sizeLines": 195,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/draftsStore.js",
+      "language": "javascript",
+      "sizeLines": 155,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/fix_modals.py",
+      "language": "python",
+      "sizeLines": 164,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/i18n.js",
+      "language": "javascript",
+      "sizeLines": 911,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/index.css",
+      "language": "css",
+      "sizeLines": 4019,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/liveToast.js",
+      "language": "javascript",
+      "sizeLines": 250,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/login/loginScene.css",
+      "language": "css",
+      "sizeLines": 4035,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/main.jsx",
+      "language": "javascript",
+      "sizeLines": 47,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/missing.txt",
+      "language": "txt",
+      "sizeLines": 10,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "frontend/src/mobile.css",
+      "language": "css",
+      "sizeLines": 619,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/motion/AnimatedNumber.jsx",
+      "language": "javascript",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/AuthEntryTransition.jsx",
+      "language": "javascript",
+      "sizeLines": 338,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/authEntryTransition.css",
+      "language": "css",
+      "sizeLines": 285,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/motion/premiumPageTransitions.css",
+      "language": "css",
+      "sizeLines": 54,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/motion/primitives.jsx",
+      "language": "javascript",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/tokens.js",
+      "language": "javascript",
+      "sizeLines": 131,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/motion/visualTransitions.js",
+      "language": "javascript",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/outbox.js",
+      "language": "javascript",
+      "sizeLines": 241,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/participantImport.js",
+      "language": "javascript",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/serverHealth.jsx",
+      "language": "javascript",
+      "sizeLines": 331,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/serverHealthCore.js",
+      "language": "javascript",
+      "sizeLines": 108,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/supercharged-tail.css",
+      "language": "css",
+      "sizeLines": 901,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/supercharged.css",
+      "language": "css",
+      "sizeLines": 1128,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/timeutils.js",
+      "language": "javascript",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/weatherIntelFilters.js",
+      "language": "javascript",
+      "sizeLines": 292,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/wirelessDateFilter.js",
+      "language": "javascript",
+      "sizeLines": 40,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/wirelessPrintTitle.js",
+      "language": "javascript",
+      "sizeLines": 34,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/wirelessRecipientLookup.js",
+      "language": "javascript",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/workingToast.js",
+      "language": "javascript",
+      "sizeLines": 193,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/workspace.js",
+      "language": "javascript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/tailwind.config.js",
+      "language": "javascript",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/vercel.json",
+      "language": "json",
+      "sizeLines": 41,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/vite.config.js",
+      "language": "javascript",
+      "sizeLines": 43,
+      "fileCategory": "code"
+    },
+    {
+      "path": "incident_validation.py",
+      "language": "python",
+      "sizeLines": 162,
+      "fileCategory": "code"
+    },
+    {
+      "path": "main.py",
+      "language": "python",
+      "sizeLines": 15413,
+      "fileCategory": "code"
+    },
+    {
+      "path": "main_after.txt",
+      "language": "txt",
+      "sizeLines": 1369,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "main_before.txt",
+      "language": "txt",
+      "sizeLines": 454,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "main_new_func.txt",
+      "language": "txt",
+      "sizeLines": 82,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "migrations/20260813_participant_types.sql",
+      "language": "sql",
+      "sizeLines": 40,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260904_mission_team_code_realtime.sql",
+      "language": "sql",
+      "sizeLines": 33,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260905_hr_active_volunteers_fix.sql",
+      "language": "sql",
+      "sizeLines": 41,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260905_participant_identity.sql",
+      "language": "sql",
+      "sizeLines": 93,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260905_prevent_users_delete.sql",
+      "language": "sql",
+      "sizeLines": 34,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260906_participant_position.sql",
+      "language": "sql",
+      "sizeLines": 23,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260907_open_mission_multi_day.sql",
+      "language": "sql",
+      "sizeLines": 49,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260907_participation_periods.sql",
+      "language": "sql",
+      "sizeLines": 57,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260907_participation_segments.sql",
+      "language": "sql",
+      "sizeLines": 44,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260907_unify_engine.sql",
+      "language": "sql",
+      "sizeLines": 18,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260909_mission_start_creation_datetime.sql",
+      "language": "sql",
+      "sizeLines": 30,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260912_jl_leave_closes_session.sql",
+      "language": "sql",
+      "sizeLines": 33,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260914_supervisors_handover.sql",
+      "language": "sql",
+      "sizeLines": 36,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260916_weather_module.sql",
+      "language": "sql",
+      "sizeLines": 38,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260917_weather_intel.sql",
+      "language": "sql",
+      "sizeLines": 215,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260920_add_youth_monitoring_status.sql",
+      "language": "sql",
+      "sizeLines": 21,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260920_read_only_missions_role.sql",
+      "language": "sql",
+      "sizeLines": 27,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260921_add_participant_notes_column.sql",
+      "language": "sql",
+      "sizeLines": 9,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260921_add_volunteer_notes_permission.sql",
+      "language": "sql",
+      "sizeLines": 25,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260922_add_staff_view_permission.sql",
+      "language": "sql",
+      "sizeLines": 18,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260922_volunteer_room_notes.sql",
+      "language": "sql",
+      "sizeLines": 61,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260923_add_youth_review_permission.sql",
+      "language": "sql",
+      "sizeLines": 31,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260923_ai_news_observed_at.sql",
+      "language": "sql",
+      "sizeLines": 20,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260924_mission_field_operation_status.sql",
+      "language": "sql",
+      "sizeLines": 77,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260927_eoc_staff_name_1000.sql",
+      "language": "sql",
+      "sizeLines": 25,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260928_participant_branch_rules.sql",
+      "language": "sql",
+      "sizeLines": 15,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260929_client_errors.sql",
+      "language": "sql",
+      "sizeLines": 44,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260929_workspace_server_side.sql",
+      "language": "sql",
+      "sizeLines": 34,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/migrations/20261017_wireless_handover.sql",
+      "language": "sql",
+      "sizeLines": 56,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/migrations/20261018_wireless_handover_v2.sql",
+      "language": "sql",
+      "sizeLines": 94,
+      "fileCategory": "data"
+    },
+    {
+      "path": "mission_flow_test.py",
+      "language": "python",
+      "sizeLines": 174,
+      "fileCategory": "code"
+    },
+    {
+      "path": "new_class.txt",
+      "language": "txt",
+      "sizeLines": 31,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "new_func.txt",
+      "language": "txt",
+      "sizeLines": 82,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openapi_spec.json",
+      "language": "json",
+      "sizeLines": 0,
+      "fileCategory": "config"
+    },
+    {
+      "path": "output.txt",
+      "language": "txt",
+      "sizeLines": 11,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "package.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/00_stack.md",
+      "language": "markdown",
+      "sizeLines": 41,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "perf/01_baseline.json",
+      "language": "json",
+      "sizeLines": 347,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/02_audit_report.md",
+      "language": "markdown",
+      "sizeLines": 46,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "perf/after22_summary.json",
+      "language": "json",
+      "sizeLines": 53,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/asset_headers_before.txt",
+      "language": "txt",
+      "sizeLines": 22,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/App-CJsu5YTT.css",
+      "language": "css",
+      "sizeLines": 1,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "language": "javascript",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/exceljs.min-BmMNYSu0.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/index-CBRKr4gE.js",
+      "language": "javascript",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/index-CWihVeMM.css",
+      "language": "css",
+      "sizeLines": 2,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/jszip.min-DnCw9i7G.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/map-vendor-CcXJxNtP.css",
+      "language": "css",
+      "sizeLines": 1,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "language": "javascript",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "language": "javascript",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/index.html",
+      "language": "html",
+      "sizeLines": 33,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "perf/bundle_after22_debug.json",
+      "language": "json",
+      "sizeLines": 17306,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/bundle_before.json",
+      "language": "json",
+      "sizeLines": 17209,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/bundle_before_summary.json",
+      "language": "json",
+      "sizeLines": 158,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/depcheck_before.txt",
+      "language": "txt",
+      "sizeLines": 11,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "perf/deptry_before.txt",
+      "language": "txt",
+      "sizeLines": 23,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "perf/frontend_headers_before.txt",
+      "language": "txt",
+      "sizeLines": 9,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "perf/harsh.mjs",
+      "language": "javascript",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/harsh22_after_blocked_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_after_blocked_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_after_blocked_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_after_ready_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_after_ready_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_after_ready_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_after_settled_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_after_settled_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_after_settled_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_blocked_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_blocked_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_blocked_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_ready_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_ready_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_ready_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_settled_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_settled_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_settled_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_trace_after.json",
+      "language": "json",
+      "sizeLines": 102,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_trace_before.json",
+      "language": "json",
+      "sizeLines": 84,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_after22_login_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_after22_login_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_after22_login_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_before_login_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_before_login_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_before_login_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_1.json",
+      "language": "json",
+      "sizeLines": 5093,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_2.json",
+      "language": "json",
+      "sizeLines": 4861,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_3.json",
+      "language": "json",
+      "sizeLines": 5044,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_4.json",
+      "language": "json",
+      "sizeLines": 5051,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_5.json",
+      "language": "json",
+      "sizeLines": 4866,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_1.json",
+      "language": "json",
+      "sizeLines": 5195,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_2.json",
+      "language": "json",
+      "sizeLines": 5218,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_3.json",
+      "language": "json",
+      "sizeLines": 5130,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_4.json",
+      "language": "json",
+      "sizeLines": 5009,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_5.json",
+      "language": "json",
+      "sizeLines": 5098,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_1.json",
+      "language": "json",
+      "sizeLines": 5082,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_2.json",
+      "language": "json",
+      "sizeLines": 4937,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_3.json",
+      "language": "json",
+      "sizeLines": 5050,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_4.json",
+      "language": "json",
+      "sizeLines": 4953,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_5.json",
+      "language": "json",
+      "sizeLines": 4914,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_1.json",
+      "language": "json",
+      "sizeLines": 5042,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_2.json",
+      "language": "json",
+      "sizeLines": 5037,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_3.json",
+      "language": "json",
+      "sizeLines": 5045,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_4.json",
+      "language": "json",
+      "sizeLines": 4969,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_5.json",
+      "language": "json",
+      "sizeLines": 4960,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/locustfile.py",
+      "language": "python",
+      "sizeLines": 80,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/login_diff22.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/snapshots_before/unavailable.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "plan.md",
+      "language": "markdown",
+      "sizeLines": 84,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "realtime.py",
+      "language": "python",
+      "sizeLines": 334,
+      "fileCategory": "code"
+    },
+    {
+      "path": "repro_route_bug.py",
+      "language": "python",
+      "sizeLines": 218,
+      "fileCategory": "code"
+    },
+    {
+      "path": "requirements.txt",
+      "language": "txt",
+      "sizeLines": 19,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "routers/branches.py",
+      "language": "python",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "routers/missions.py",
+      "language": "python",
+      "sizeLines": 311,
+      "fileCategory": "code"
+    },
+    {
+      "path": "routers/users.py",
+      "language": "python",
+      "sizeLines": 190,
+      "fileCategory": "code"
+    },
+    {
+      "path": "routers/volunteers.py",
+      "language": "python",
+      "sizeLines": 46,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_diag.py",
+      "language": "python",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_diag2.py",
+      "language": "python",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_draft_lifecycle.py",
+      "language": "python",
+      "sizeLines": 326,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_e2e_scenarios.py",
+      "language": "python",
+      "sizeLines": 516,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_join_leave_scenarios.py",
+      "language": "python",
+      "sizeLines": 320,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_runtime_verify.py",
+      "language": "python",
+      "sizeLines": 393,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_verify_hr.py",
+      "language": "python",
+      "sizeLines": 114,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_verify_new.py",
+      "language": "python",
+      "sizeLines": 200,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_verify_segments.py",
+      "language": "python",
+      "sizeLines": 461,
+      "fileCategory": "code"
+    },
+    {
+      "path": "security_audit_probe.py",
+      "language": "python",
+      "sizeLines": 222,
+      "fileCategory": "code"
+    },
+    {
+      "path": "seg-probe.html",
+      "language": "html",
+      "sizeLines": 113,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "set_password.py",
+      "language": "python",
+      "sizeLines": 41,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_anthropic.py",
+      "language": "python",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_gemini.py",
+      "language": "python",
+      "sizeLines": 150,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_gemini_final.py",
+      "language": "python",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_gemini_v2.py",
+      "language": "python",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_gemini_v3.py",
+      "language": "python",
+      "sizeLines": 152,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_summary.md",
+      "language": "markdown",
+      "sizeLines": 64,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "social_media_sources.py",
+      "language": "python",
+      "sizeLines": 427,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_ai_news_dedupe.py",
+      "language": "python",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_ai_news_repair_flow.py",
+      "language": "python",
+      "sizeLines": 129,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_ai_radar_resilience.py",
+      "language": "python",
+      "sizeLines": 147,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_api.py",
+      "language": "python",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_apify_social_sources.py",
+      "language": "python",
+      "sizeLines": 319,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_bug2_fix.py",
+      "language": "python",
+      "sizeLines": 158,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_bug3_fix.py",
+      "language": "python",
+      "sizeLines": 52,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_db.py",
+      "language": "python",
+      "sizeLines": 11,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_eq_intel.py",
+      "language": "python",
+      "sizeLines": 323,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_eq_log.py",
+      "language": "python",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_eq_schema_bootstrap.py",
+      "language": "python",
+      "sizeLines": 166,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_eq_schema_postgres_concurrency.py",
+      "language": "python",
+      "sizeLines": 166,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_gemini.py",
+      "language": "python",
+      "sizeLines": 66,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_gemini2.py",
+      "language": "python",
+      "sizeLines": 156,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_gemini3.py",
+      "language": "python",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_gov_contacts.py",
+      "language": "python",
+      "sizeLines": 399,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_health_endpoint.py",
+      "language": "python",
+      "sizeLines": 100,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_idempotency_middleware_disconnect.py",
+      "language": "python",
+      "sizeLines": 96,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_incident_validation.py",
+      "language": "python",
+      "sizeLines": 109,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_jl_redesign.py",
+      "language": "python",
+      "sizeLines": 260,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_mission.py",
+      "language": "python",
+      "sizeLines": 90,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_multi_itinerary_hours.py",
+      "language": "python",
+      "sizeLines": 273,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_n1_query_optimizations.py",
+      "language": "python",
+      "sizeLines": 2509,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_no_detail_loss.py",
+      "language": "python",
+      "sizeLines": 314,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_permissions.py",
+      "language": "python",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_social_media_sources.py",
+      "language": "python",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/n1_test_schema.sql",
+      "language": "sql",
+      "sizeLines": 17,
+      "fileCategory": "data"
+    },
+    {
+      "path": "tests/test_cleanup_stale_return_status.py",
+      "language": "python",
+      "sizeLines": 92,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_jl_weather_regressions.py",
+      "language": "python",
+      "sizeLines": 97,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/README.md",
+      "language": "markdown",
+      "sizeLines": 101,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "tools/check_credential_hygiene.py",
+      "language": "python",
+      "sizeLines": 670,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/tests/test_check_credential_hygiene.py",
+      "language": "python",
+      "sizeLines": 318,
+      "fileCategory": "code"
+    },
+    {
+      "path": "vercel.json",
+      "language": "json",
+      "sizeLines": 51,
+      "fileCategory": "config"
+    },
+    {
+      "path": "verify_12h.mjs",
+      "language": "javascript",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_bug2_fix.py",
+      "language": "python",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_db_connections.py",
+      "language": "python",
+      "sizeLines": 217,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_field_status_fix.py",
+      "language": "python",
+      "sizeLines": 184,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_mission.py",
+      "language": "python",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_secrets_history.py",
+      "language": "python",
+      "sizeLines": 160,
+      "fileCategory": "code"
+    },
+    {
+      "path": "weather_backfill.py",
+      "language": "python",
+      "sizeLines": 918,
+      "fileCategory": "code"
+    },
+    {
+      "path": "weather_backfill.py.bak",
+      "language": "bak",
+      "sizeLines": 163,
+      "fileCategory": "code"
+    },
+    {
+      "path": "weather_backfill_report.json",
+      "language": "json",
+      "sizeLines": 701,
+      "fileCategory": "config"
+    },
+    {
+      "path": "weather_extra_backfill.py",
+      "language": "python",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "weather_intel.py",
+      "language": "python",
+      "sizeLines": 1214,
+      "fileCategory": "code"
+    },
+    {
+      "path": "wrangler.jsonc",
+      "language": "jsonc",
+      "sizeLines": 10,
+      "fileCategory": "config"
+    },
+    {
+      "path": "تصنيفات مهام.xlsx",
+      "language": "xlsx",
+      "sizeLines": 2838,
+      "fileCategory": "code"
+    },
+    {
+      "path": "تصنيفات مهام_مراجعة.xlsx",
+      "language": "xlsx",
+      "sizeLines": 3715,
+      "fileCategory": "code"
+    },
+    {
+      "path": "خطة التشغيل.docx",
+      "language": "docx",
+      "sizeLines": 62,
+      "fileCategory": "code"
+    },
+    {
+      "path": "فورم المشاركين.xlsx",
+      "language": "xlsx",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    }
+  ],
+  "totalFiles": 495,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "large",
+  "failures": [],
+  "stats": {
+    "filesScanned": 495,
+    "byCategory": {
+      "infra": 11,
+      "code": 322,
+      "docs": 34,
+      "data": 32,
+      "markup": 16,
+      "config": 78,
+      "script": 2
+    },
+    "byLanguage": {
+      "unknown": 121,
+      "yaml": 9,
+      "markdown": 17,
+      "dockerfile": 1,
+      "sql": 32,
+      "javascript": 76,
+      "css": 13,
+      "python": 115,
+      "baj": 1,
+      "baf": 1,
+      "txt": 17,
+      "json": 61,
+      "docx": 2,
+      "xml": 16,
+      "rels": 2,
+      "batch": 1,
+      "powershell": 1,
+      "html": 3,
+      "bak": 2,
+      "jsonc": 1,
+      "xlsx": 3
+    }
+  }
+}

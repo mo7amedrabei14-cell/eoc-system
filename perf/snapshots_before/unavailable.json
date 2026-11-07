@@ -1,0 +1,5 @@
+{
+  "available": false,
+  "reason": "Local PostgreSQL and test users are unavailable; authenticated GET responses could not be captured without using production data.",
+  "syntheticSnapshotsCreated": false
+}

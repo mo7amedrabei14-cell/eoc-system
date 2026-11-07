@@ -1,0 +1,1440 @@
+{
+  "nodes": [
+    {
+      "id": "file:smoke_test_anthropic.py",
+      "type": "file",
+      "name": "smoke_test_anthropic.py",
+      "filePath": "smoke_test_anthropic.py",
+      "summary": "Standalone Anthropic integration smoke test that configures the weather-intelligence module and exercises its AI response path with synthetic input, reporting response or error outcomes.",
+      "tags": [
+        "test",
+        "integration-test",
+        "anthropic"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:smoke_test_gemini.py",
+      "type": "file",
+      "name": "smoke_test_gemini.py",
+      "filePath": "smoke_test_gemini.py",
+      "summary": "Standalone AI-provider smoke test that configures provider settings from the environment and calls the weather-intelligence AI path with synthetic data to check response handling.",
+      "tags": [
+        "test",
+        "integration-test",
+        "ai-provider"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:smoke_test_gemini_final.py",
+      "type": "file",
+      "name": "smoke_test_gemini_final.py",
+      "filePath": "smoke_test_gemini_final.py",
+      "summary": "Gemini integration smoke-test iteration that discovers an available model through the provider API, configures the weather-intelligence module, and checks its structured response path.",
+      "tags": [
+        "test",
+        "integration-test",
+        "gemini"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:smoke_test_gemini_v2.py",
+      "type": "file",
+      "name": "smoke_test_gemini_v2.py",
+      "filePath": "smoke_test_gemini_v2.py",
+      "summary": "Gemini smoke-test iteration that selects an available model with configured fallbacks, then exercises the weather-intelligence AI call and checks response or error handling.",
+      "tags": [
+        "test",
+        "integration-test",
+        "gemini"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:smoke_test_gemini_v3.py",
+      "type": "file",
+      "name": "smoke_test_gemini_v3.py",
+      "filePath": "smoke_test_gemini_v3.py",
+      "summary": "Provider-configuration smoke test that exercises the weather-intelligence AI call with synthetic input and reports whether a structured response was produced.",
+      "tags": [
+        "test",
+        "integration-test",
+        "gemini"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_gemini.py",
+      "type": "file",
+      "name": "test_gemini.py",
+      "filePath": "test_gemini.py",
+      "summary": "Focused manual integration check for weather_intel.call_ai, passing synthetic input and reporting parsed output or an error.",
+      "tags": [
+        "test",
+        "integration-test",
+        "ai-provider"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_gemini2.py",
+      "type": "file",
+      "name": "test_gemini2.py",
+      "filePath": "test_gemini2.py",
+      "summary": "Expanded AI integration check that prepares provider configuration, invokes weather_intel.call_ai with synthetic data, and reports parsed output or failures.",
+      "tags": [
+        "test",
+        "integration-test",
+        "ai-provider"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_gemini3.py",
+      "type": "file",
+      "name": "test_gemini3.py",
+      "filePath": "test_gemini3.py",
+      "summary": "AI integration check that discovers or selects a Gemini model, invokes weather_intel.call_ai with synthetic data, and reports response or error outcomes.",
+      "tags": [
+        "test",
+        "integration-test",
+        "gemini"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:weather_intel.py",
+      "type": "file",
+      "name": "weather_intel.py",
+      "filePath": "weather_intel.py",
+      "summary": "Implements the weather-intelligence pipeline: it retrieves location, configuration, historical, forecast, and supplementary weather data; derives metric baselines, statistics, anomaly and frequency signals, and hazards; then requests structured AI interpretation and submits a run payload. It also provides date-window, HTTP, parsing, and pipeline-orchestration helpers.",
+      "tags": [
+        "weather-intelligence",
+        "data-pipeline",
+        "forecast-analysis",
+        "ai-integration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_intel.py:optional_positive_int",
+      "type": "function",
+      "name": "optional_positive_int",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        50,
+        57
+      ],
+      "summary": "Parses an optional integer setting and accepts it only when positive.",
+      "tags": [
+        "configuration",
+        "validation",
+        "numeric-utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:metric_def",
+      "type": "function",
+      "name": "metric_def",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        118,
+        120
+      ],
+      "summary": "Constructs a metric definition from the supplied metric metadata.",
+      "tags": [
+        "data-model",
+        "metric",
+        "factory"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:cairo_today",
+      "type": "function",
+      "name": "cairo_today",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        157,
+        158
+      ],
+      "summary": "Returns the current calendar date in Cairo time.",
+      "tags": [
+        "date-time",
+        "timezone",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:target_date_for_run",
+      "type": "function",
+      "name": "target_date_for_run",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        161,
+        162
+      ],
+      "summary": "Determines the date the current pipeline run should analyze.",
+      "tags": [
+        "date-time",
+        "pipeline",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:cairo_now_str",
+      "type": "function",
+      "name": "cairo_now_str",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        165,
+        166
+      ],
+      "summary": "Formats the current Cairo-local timestamp for pipeline records.",
+      "tags": [
+        "date-time",
+        "timezone",
+        "formatting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:window_dates",
+      "type": "function",
+      "name": "window_dates",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        169,
+        179
+      ],
+      "summary": "Calculates the analysis-window date boundaries for a target day, window size, and minimum year.",
+      "tags": [
+        "date-time",
+        "windowing",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:http_get",
+      "type": "function",
+      "name": "http_get",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        182,
+        186
+      ],
+      "summary": "Performs a bounded HTTP GET request using the pipeline?s shared request conventions.",
+      "tags": [
+        "http-client",
+        "networking",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:http_post",
+      "type": "function",
+      "name": "http_post",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        189,
+        192
+      ],
+      "summary": "Performs a bounded JSON HTTP POST using the pipeline?s shared request conventions.",
+      "tags": [
+        "http-client",
+        "networking",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:numeric",
+      "type": "function",
+      "name": "numeric",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        195,
+        203
+      ],
+      "summary": "Converts an input value to a usable numeric value while handling invalid or absent data.",
+      "tags": [
+        "numeric-utility",
+        "data-validation",
+        "normalization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:percentile",
+      "type": "function",
+      "name": "percentile",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        207,
+        224
+      ],
+      "summary": "Computes a requested quantile from an already sorted collection of values.",
+      "tags": [
+        "statistics",
+        "percentile",
+        "numeric-utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:compute_statistics",
+      "type": "function",
+      "name": "compute_statistics",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        227,
+        257
+      ],
+      "summary": "Builds summary statistics and analysis metadata for a metric over the selected observation window.",
+      "tags": [
+        "statistics",
+        "baseline-analysis",
+        "weather-metrics"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:classify_anomaly",
+      "type": "function",
+      "name": "classify_anomaly",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        260,
+        296
+      ],
+      "summary": "Classifies a metric value against its baseline statistics with direction and sample-count constraints.",
+      "tags": [
+        "anomaly-detection",
+        "statistics",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:compute_frequency",
+      "type": "function",
+      "name": "compute_frequency",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        299,
+        315
+      ],
+      "summary": "Calculates how frequently metric observations satisfy a configured threshold relation.",
+      "tags": [
+        "frequency-analysis",
+        "thresholds",
+        "weather-metrics"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:api_headers",
+      "type": "function",
+      "name": "api_headers",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        319,
+        320
+      ],
+      "summary": "Builds the request headers used by the weather service integration.",
+      "tags": [
+        "http-client",
+        "service-integration",
+        "configuration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:fetch_locations",
+      "type": "function",
+      "name": "fetch_locations",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        323,
+        326
+      ],
+      "summary": "Retrieves the locations configured for weather-intelligence processing.",
+      "tags": [
+        "data-fetching",
+        "locations",
+        "service-integration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:fetch_config",
+      "type": "function",
+      "name": "fetch_config",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        329,
+        330
+      ],
+      "summary": "Retrieves the runtime configuration used to select and analyze weather metrics.",
+      "tags": [
+        "data-fetching",
+        "configuration",
+        "service-integration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:fetch_history",
+      "type": "function",
+      "name": "fetch_history",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        333,
+        340
+      ],
+      "summary": "Loads historical metric observations for a location and analysis window.",
+      "tags": [
+        "data-fetching",
+        "historical-data",
+        "weather-metrics"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:fetch_forecast",
+      "type": "function",
+      "name": "fetch_forecast",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        343,
+        395
+      ],
+      "summary": "Retrieves forecast data for a coordinate pair and target date.",
+      "tags": [
+        "forecast-data",
+        "data-fetching",
+        "weather-api"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:fetch_extra_layers",
+      "type": "function",
+      "name": "fetch_extra_layers",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        398,
+        460
+      ],
+      "summary": "Retrieves supplementary forecast layers and related historical context for a location.",
+      "tags": [
+        "forecast-data",
+        "supplementary-data",
+        "data-fetching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_intel.py:fetch_extra_history",
+      "type": "function",
+      "name": "fetch_extra_history",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        463,
+        471
+      ],
+      "summary": "Loads supplementary historical observations for a location and analysis window.",
+      "tags": [
+        "historical-data",
+        "supplementary-data",
+        "data-fetching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:build_extra_baseline",
+      "type": "function",
+      "name": "build_extra_baseline",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        474,
+        496
+      ],
+      "summary": "Builds a baseline series from supplementary database and recent observations.",
+      "tags": [
+        "baseline-analysis",
+        "historical-data",
+        "normalization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:first",
+      "type": "function",
+      "name": "first",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        498,
+        501
+      ],
+      "summary": "Returns the first available value from a sequence of candidate values.",
+      "tags": [
+        "utility",
+        "fallback",
+        "data-normalization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:fetch_archive_recent",
+      "type": "function",
+      "name": "fetch_archive_recent",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        504,
+        536
+      ],
+      "summary": "Retrieves recent archived observations for a location over a specified date range.",
+      "tags": [
+        "archive-data",
+        "historical-data",
+        "data-fetching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:history_metric_columns",
+      "type": "function",
+      "name": "history_metric_columns",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        542,
+        547
+      ],
+      "summary": "Selects the historical-data columns corresponding to the supported weather metrics.",
+      "tags": [
+        "data-model",
+        "weather-metrics",
+        "schema-utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:merge_history_rows",
+      "type": "function",
+      "name": "merge_history_rows",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        550,
+        565
+      ],
+      "summary": "Combines historical and recent observation rows into a consistent series.",
+      "tags": [
+        "data-processing",
+        "historical-data",
+        "normalization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:build_metric_series",
+      "type": "function",
+      "name": "build_metric_series",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        568,
+        584
+      ],
+      "summary": "Builds the selected metric?s time series from historical and recent observations.",
+      "tags": [
+        "data-processing",
+        "weather-metrics",
+        "time-series"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:build_baseline",
+      "type": "function",
+      "name": "build_baseline",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        587,
+        597
+      ],
+      "summary": "Derives the comparison baseline for a metric from its historical and recent observations.",
+      "tags": [
+        "baseline-analysis",
+        "historical-data",
+        "weather-metrics"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:build_frequencies",
+      "type": "function",
+      "name": "build_frequencies",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        604,
+        633
+      ],
+      "summary": "Computes per-metric threshold frequencies for a location using its configuration and statistics.",
+      "tags": [
+        "frequency-analysis",
+        "weather-metrics",
+        "data-processing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:detect_hazards",
+      "type": "function",
+      "name": "detect_hazards",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        636,
+        695
+      ],
+      "summary": "Identifies configured hazards from forecast values and associated metric conditions.",
+      "tags": [
+        "hazard-detection",
+        "forecast-analysis",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:cfg_f",
+      "type": "function",
+      "name": "cfg_f",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        698,
+        702
+      ],
+      "summary": "Reads and converts a numeric option from the runtime configuration, applying a default when needed.",
+      "tags": [
+        "configuration",
+        "numeric-utility",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:extract_json",
+      "type": "function",
+      "name": "extract_json",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        706,
+        748
+      ],
+      "summary": "Extracts a JSON object from model-generated text and parses it into structured data.",
+      "tags": [
+        "parsing",
+        "json",
+        "ai-integration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:call_ai",
+      "type": "function",
+      "name": "call_ai",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        751,
+        891
+      ],
+      "summary": "Calls the configured AI provider with structured weather context and returns parsed output alongside response or error details.",
+      "tags": [
+        "ai-integration",
+        "http-client",
+        "json-parsing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_intel.py:build_ai_input",
+      "type": "function",
+      "name": "build_ai_input",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        894,
+        933
+      ],
+      "summary": "Assembles forecast, baseline, frequency, anomaly, and hazard context for AI interpretation.",
+      "tags": [
+        "data-transformation",
+        "ai-integration",
+        "weather-analysis"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:send_ingest",
+      "type": "function",
+      "name": "send_ingest",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        937,
+        947
+      ],
+      "summary": "Submits the completed weather-intelligence payload to the ingestion service.",
+      "tags": [
+        "service-integration",
+        "http-client",
+        "data-ingestion"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_intel.py:build_run",
+      "type": "function",
+      "name": "build_run",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        951,
+        954
+      ],
+      "summary": "Builds the persisted run record from statistics and additional run metadata.",
+      "tags": [
+        "data-model",
+        "pipeline",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_intel.py:run_pipeline",
+      "type": "function",
+      "name": "run_pipeline",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        957,
+        1207
+      ],
+      "summary": "Orchestrates location and configuration retrieval, weather-data processing, baseline and hazard analysis, AI interpretation, and result ingestion.",
+      "tags": [
+        "pipeline",
+        "orchestration",
+        "weather-intelligence",
+        "ai-integration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_intel.py:chain_metrics",
+      "type": "function",
+      "name": "chain_metrics",
+      "filePath": "weather_intel.py",
+      "lineRange": [
+        1210,
+        1211
+      ],
+      "summary": "Derives the compact metric summary used to link analysis results across the run.",
+      "tags": [
+        "weather-metrics",
+        "data-transformation",
+        "pipeline"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:optional_positive_int",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:optional_positive_int",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:metric_def",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:metric_def",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:cairo_today",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:cairo_today",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:target_date_for_run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:target_date_for_run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:cairo_now_str",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:cairo_now_str",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:window_dates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:window_dates",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:http_get",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:http_get",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:http_post",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:http_post",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:numeric",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:numeric",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:percentile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:percentile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:compute_statistics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:compute_statistics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:classify_anomaly",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:classify_anomaly",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:compute_frequency",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:compute_frequency",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:api_headers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:api_headers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_locations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_locations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_history",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_history",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_forecast",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_forecast",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_extra_layers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_extra_layers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_extra_history",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_extra_history",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_extra_baseline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_extra_baseline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:first",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:first",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_archive_recent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:fetch_archive_recent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:history_metric_columns",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:history_metric_columns",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:merge_history_rows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:merge_history_rows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_metric_series",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_metric_series",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_baseline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_baseline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_frequencies",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_frequencies",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:detect_hazards",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:detect_hazards",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:cfg_f",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:cfg_f",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:extract_json",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:extract_json",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_ai_input",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_ai_input",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:send_ingest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:send_ingest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:build_run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:run_pipeline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:run_pipeline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:chain_metrics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "function:weather_intel.py:chain_metrics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:smoke_test_anthropic.py",
+      "target": "file:weather_intel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:smoke_test_gemini.py",
+      "target": "file:weather_intel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:smoke_test_gemini_final.py",
+      "target": "file:weather_intel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:smoke_test_gemini_v2.py",
+      "target": "file:weather_intel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:smoke_test_gemini_v3.py",
+      "target": "file:weather_intel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_gemini.py",
+      "target": "file:weather_intel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_gemini2.py",
+      "target": "file:weather_intel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_gemini3.py",
+      "target": "file:weather_intel.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:smoke_test_anthropic.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "file:smoke_test_anthropic.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:smoke_test_gemini.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "file:smoke_test_gemini.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:smoke_test_gemini_final.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "file:smoke_test_gemini_final.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:smoke_test_gemini_v2.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "file:smoke_test_gemini_v2.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:smoke_test_gemini_v3.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "file:smoke_test_gemini_v3.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:test_gemini.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "file:test_gemini.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:test_gemini2.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "file:test_gemini2.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:test_gemini3.py",
+      "target": "function:weather_intel.py:call_ai",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_intel.py",
+      "target": "file:test_gemini3.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

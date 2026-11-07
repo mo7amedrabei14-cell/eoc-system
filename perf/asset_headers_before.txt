@@ -1,0 +1,22 @@
+HTTP/1.1 200 OK
+Vary: Origin
+Content-Length: 1749996
+Content-Type: text/javascript
+Last-Modified: Wed, 04 Nov 2026 14:34:28 GMT
+ETag: W/"1749996-1793802868525"
+Cache-Control: no-cache
+Date: Wed, 04 Nov 2026 14:59:01 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+HTTP/1.1 200 OK
+Vary: Origin
+Content-Length: 304867
+Content-Type: text/css
+Last-Modified: Wed, 04 Nov 2026 14:34:28 GMT
+ETag: W/"304867-1793802868595"
+Cache-Control: no-cache
+Date: Wed, 04 Nov 2026 14:59:02 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

@@ -1,0 +1,912 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 3,
+  "batchFiles": [
+    {
+      "path": "diag_route_titles_readonly.py",
+      "language": "python",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "main.py",
+      "language": "python",
+      "sizeLines": 15413,
+      "fileCategory": "code"
+    },
+    {
+      "path": "mission_flow_test.py",
+      "language": "python",
+      "sizeLines": 174,
+      "fileCategory": "code"
+    },
+    {
+      "path": "repro_route_bug.py",
+      "language": "python",
+      "sizeLines": 218,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_draft_lifecycle.py",
+      "language": "python",
+      "sizeLines": 326,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_e2e_scenarios.py",
+      "language": "python",
+      "sizeLines": 516,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_join_leave_scenarios.py",
+      "language": "python",
+      "sizeLines": 320,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_runtime_verify.py",
+      "language": "python",
+      "sizeLines": 393,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_verify_hr.py",
+      "language": "python",
+      "sizeLines": 114,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_verify_segments.py",
+      "language": "python",
+      "sizeLines": 461,
+      "fileCategory": "code"
+    },
+    {
+      "path": "security_audit_probe.py",
+      "language": "python",
+      "sizeLines": 222,
+      "fileCategory": "code"
+    },
+    {
+      "path": "set_password.py",
+      "language": "python",
+      "sizeLines": 41,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_bug2_fix.py",
+      "language": "python",
+      "sizeLines": 158,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_db.py",
+      "language": "python",
+      "sizeLines": 11,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_eq_intel.py",
+      "language": "python",
+      "sizeLines": 323,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_eq_log.py",
+      "language": "python",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_gov_contacts.py",
+      "language": "python",
+      "sizeLines": 399,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_health_endpoint.py",
+      "language": "python",
+      "sizeLines": 100,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_jl_redesign.py",
+      "language": "python",
+      "sizeLines": 260,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_mission.py",
+      "language": "python",
+      "sizeLines": 90,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_multi_itinerary_hours.py",
+      "language": "python",
+      "sizeLines": 273,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_no_detail_loss.py",
+      "language": "python",
+      "sizeLines": 314,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_permissions.py",
+      "language": "python",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_bug2_fix.py",
+      "language": "python",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_field_status_fix.py",
+      "language": "python",
+      "sizeLines": 184,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_mission.py",
+      "language": "python",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "diag_route_titles_readonly.py": [
+      "db.py"
+    ],
+    "main.py": [
+      "audit.py",
+      "auth.py",
+      "db.py",
+      "realtime.py"
+    ],
+    "mission_flow_test.py": [
+      "db.py",
+      "main.py"
+    ],
+    "repro_route_bug.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "run_draft_lifecycle.py": [
+      "auth.py",
+      "main.py"
+    ],
+    "run_e2e_scenarios.py": [
+      "auth.py",
+      "main.py"
+    ],
+    "run_join_leave_scenarios.py": [
+      "auth.py",
+      "main.py"
+    ],
+    "run_runtime_verify.py": [
+      "auth.py",
+      "main.py"
+    ],
+    "run_verify_hr.py": [
+      "db.py",
+      "main.py"
+    ],
+    "run_verify_segments.py": [
+      "main.py"
+    ],
+    "security_audit_probe.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "set_password.py": [
+      "db.py"
+    ],
+    "test_bug2_fix.py": [
+      "main.py"
+    ],
+    "test_db.py": [
+      "db.py"
+    ],
+    "test_eq_intel.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "test_eq_log.py": [
+      "db.py"
+    ],
+    "test_gov_contacts.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "test_health_endpoint.py": [
+      "main.py"
+    ],
+    "test_jl_redesign.py": [
+      "main.py"
+    ],
+    "test_mission.py": [
+      "auth.py",
+      "db.py"
+    ],
+    "test_multi_itinerary_hours.py": [
+      "main.py"
+    ],
+    "test_no_detail_loss.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "test_permissions.py": [
+      "auth.py"
+    ],
+    "verify_bug2_fix.py": [
+      "main.py"
+    ],
+    "verify_field_status_fix.py": [
+      "auth.py",
+      "db.py",
+      "main.py"
+    ],
+    "verify_mission.py": [
+      "db.py"
+    ]
+  },
+  "neighborMap": {
+    "diag_route_titles_readonly.py": [
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "main.py": [
+      {
+        "path": "audit.py",
+        "batchIndex": 5,
+        "symbols": [
+          "audit_value",
+          "create_audit_log"
+        ]
+      },
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      },
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      },
+      {
+        "path": "realtime.py",
+        "batchIndex": 5,
+        "symbols": [
+          "_normalize_action",
+          "_strip_scope",
+          "is_same_logical_action",
+          "get_latest_recent_event_action",
+          "is_recent_duplicate_action",
+          "find_recent_duplicate_target_ids",
+          "resolve_mission_creator",
+          "notify_participant_accounts",
+          "create_realtime_event"
+        ]
+      },
+      {
+        "path": "_jl_db_integration.py",
+        "batchIndex": 2,
+        "symbols": [
+          "make_mission",
+          "create",
+          "put",
+          "jl_entries",
+          "q",
+          "hours_for",
+          "check",
+          "cleanup_test_data",
+          "main_test"
+        ]
+      },
+      {
+        "path": "_jl_logic_test.py",
+        "batchIndex": 2,
+        "symbols": [
+          "arr"
+        ]
+      },
+      {
+        "path": "_test_eq_ingest.py",
+        "batchIndex": 2,
+        "symbols": [
+          "check",
+          "db_counts",
+          "run_cycle"
+        ]
+      },
+      {
+        "path": "_test_sse.py",
+        "batchIndex": 2,
+        "symbols": [
+          "check",
+          "make_token",
+          "test_auth",
+          "test_stream_shapes",
+          "test_no_duplicate_contract",
+          "test_heartbeat_and_eof",
+          "test_poll_untouched",
+          "test_status_readonly"
+        ]
+      },
+      {
+        "path": "audit_test.py",
+        "batchIndex": 2,
+        "symbols": [
+          "check",
+          "route",
+          "mission_data"
+        ]
+      },
+      {
+        "path": "cleanup_stale_return_status.py",
+        "batchIndex": 30,
+        "symbols": [
+          "main"
+        ]
+      },
+      {
+        "path": "diag_bug2_readonly.py",
+        "batchIndex": 2,
+        "symbols": [
+          "section"
+        ]
+      },
+      {
+        "path": "diag_hr.py",
+        "batchIndex": 2,
+        "symbols": []
+      },
+      {
+        "path": "diag_hr2.py",
+        "batchIndex": 2,
+        "symbols": []
+      },
+      {
+        "path": "test_ai_news_repair_flow.py",
+        "batchIndex": 6,
+        "symbols": [
+          "check"
+        ]
+      },
+      {
+        "path": "test_bug3_fix.py",
+        "batchIndex": 5,
+        "symbols": []
+      },
+      {
+        "path": "test_n1_query_optimizations.py",
+        "batchIndex": 5,
+        "symbols": [
+          "_wait_for_schema",
+          "ok",
+          "load_legacy_module",
+          "Counter",
+          "_norm_param",
+          "CountingCursor",
+          "CountingConnection",
+          "write_statements",
+          "reset_db",
+          "new_mission",
+          "new_route",
+          "new_participant",
+          "assign",
+          "new_session",
+          "new_jl_entry",
+          "call_details",
+          "seed_details",
+          "test_mission_details",
+          "snapshot_jl",
+          "run_materialize",
+          "seed_materialize",
+          "test_materialize",
+          "test_trigger_assumptions",
+          "test_identity_batch",
+          "test_notification_batch",
+          "test_recent_realtime_dedupe_window",
+          "test_participant_notification_dedupe_batch",
+          "test_realtime_dedupe_is_recipient_scoped",
+          "test_wireless_delivery_batch",
+          "test_wireless_inventory_calc_batch",
+          "test_end_participation_presence_batch",
+          "test_cross_source_batch",
+          "test_cross_source_fallback_batch",
+          "test_local_history_batch",
+          "test_catalog_baseline_batch",
+          "test_secondary_history_batch",
+          "test_world_catalog_year_window_batch",
+          "test_update_user_branches_route_batch",
+          "test_jl_event_preserves_creator_recipient",
+          "test_weather_history_mixed_numeric_batch",
+          "test_batched_maintenance_writes",
+          "test_end_participation_writes_batch",
+          "test_join_leave_catalog_write_batch",
+          "test_mission_assignment_write_batch",
+          "test_mission_route_write_batch",
+          "call_bulk",
+          "seed_earthquakes",
+          "test_earthquake_catalog_batch_insert",
+          "test_world_backfill_runtime_batches",
+          "test_bulk",
+          "main"
+        ]
+      },
+      {
+        "path": "tests/test_jl_weather_regressions.py",
+        "batchIndex": 5,
+        "symbols": [
+          "_participant",
+          "_run_join_leave_event",
+          "test_join_leave_event_targets_creator_when_another_user_is_actor",
+          "test_join_leave_event_is_untargeted_when_creator_is_actor",
+          "_FakeCursor",
+          "test_weather_history_batch_normalizes_mixed_numeric_types_and_preserves_nulls"
+        ]
+      }
+    ],
+    "mission_flow_test.py": [
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "repro_route_bug.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      },
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "run_draft_lifecycle.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      }
+    ],
+    "run_e2e_scenarios.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      }
+    ],
+    "run_join_leave_scenarios.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      }
+    ],
+    "run_runtime_verify.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      }
+    ],
+    "run_verify_hr.py": [
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "security_audit_probe.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      },
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "set_password.py": [
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "test_db.py": [
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "test_eq_intel.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      },
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "test_eq_log.py": [
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "test_gov_contacts.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      },
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "test_mission.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      },
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "test_no_detail_loss.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      },
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "test_permissions.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      }
+    ],
+    "verify_field_status_fix.py": [
+      {
+        "path": "auth.py",
+        "batchIndex": 2,
+        "symbols": [
+          "get_session_generation",
+          "invalidate_session_generation_cache",
+          "authenticate_user",
+          "create_access_token",
+          "get_effective_permissions",
+          "get_user_branches",
+          "get_user_role",
+          "check_permission",
+          "check_branch_access",
+          "authorize",
+          "get_current_user_id",
+          "explain_token_failure"
+        ]
+      },
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ],
+    "verify_mission.py": [
+      {
+        "path": "db.py",
+        "batchIndex": 2,
+        "symbols": [
+          "_is_pooled",
+          "_clean_dsn",
+          "_pooler_kwargs",
+          "_is_retryable",
+          "get_connection"
+        ]
+      }
+    ]
+  }
+}

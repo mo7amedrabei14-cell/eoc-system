@@ -1,0 +1,14 @@
+{
+  "fixedSectionOk": true,
+  "nodesRecovered": 2,
+  "edgesRestored": 10,
+  "crossBatchEdgesAdded": 0,
+  "typesRemapped": 0,
+  "complexityRemapped": 0,
+  "notes": [
+    "Merge counts reconcile: 5 tested_by links were dropped and 13 path-based test links added; 5 dropped links were recoverable because endpoints exist and each test target imports the production module, so they were restored.",
+    "Added 2 missing canonical migration file nodes and 5 file-to-table contains edges; existing table nodes were preserved.",
+    "All 495 inventory paths now have a canonical file-level node; all 213 project-internal importMap relationships already had matching imports edges.",
+    "All graph edge endpoints are valid; no node type or complexity remapping was needed."
+  ]
+}

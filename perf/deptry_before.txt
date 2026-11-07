@@ -1,0 +1,23 @@
+Assuming the corresponding module name of package 'gunicorn' is 'gunicorn'. Install the package or configure a package_module_name_map entry to override this behaviour.
+Scanning 113 files...
+
+[1mmain.py[m[36m:[m5[36m:[m1[36m:[m [1m[31mDEP003[m 'starlette' imported but it is a transitive dependency
+[1mmain.py[m[36m:[m9[36m:[m1[36m:[m [1m[31mDEP003[m 'pydantic' imported but it is a transitive dependency
+[1mmain.py[m[36m:[m10942[36m:[m16[36m:[m [1m[31mDEP003[m 'websocket' imported but it is a transitive dependency
+[1mperf\locustfile.py[m[36m:[m5[36m:[m1[36m:[m [1m[31mDEP003[m 'locust' imported but it is a transitive dependency
+[1mrequirements.txt[m[36m:[m [1m[31mDEP002[m 'psycopg-binary' defined as a dependency but not used in the codebase
+[1mrequirements.txt[m[36m:[m [1m[31mDEP002[m 'python-multipart' defined as a dependency but not used in the codebase
+[1mrequirements.txt[m[36m:[m [1m[31mDEP002[m 'argon2-cffi' defined as a dependency but not used in the codebase
+[1mrequirements.txt[m[36m:[m [1m[31mDEP002[m 'numpy' defined as a dependency but not used in the codebase
+[1mrequirements.txt[m[36m:[m [1m[31mDEP002[m 'schedule' defined as a dependency but not used in the codebase
+[1mrequirements.txt[m[36m:[m [1m[31mDEP002[m 'google-genai' defined as a dependency but not used in the codebase
+[1mrequirements.txt[m[36m:[m [1m[31mDEP002[m 'flask' defined as a dependency but not used in the codebase
+[1mrequirements.txt[m[36m:[m [1m[31mDEP002[m 'gunicorn' defined as a dependency but not used in the codebase
+[1mrouters\missions.py[m[36m:[m3[36m:[m1[36m:[m [1m[31mDEP003[m 'pydantic' imported but it is a transitive dependency
+[1mrouters\users.py[m[36m:[m2[36m:[m1[36m:[m [1m[31mDEP003[m 'pydantic' imported but it is a transitive dependency
+[1mrouters\volunteers.py[m[36m:[m2[36m:[m1[36m:[m [1m[31mDEP003[m 'pydantic' imported but it is a transitive dependency
+[1mtools\tests\test_check_credential_hygiene.py[m[36m:[m30[36m:[m8[36m:[m [1m[31mDEP001[m 'check_credential_hygiene' imported but missing from the dependency definitions
+[1mweather_intel.py[m[36m:[m42[36m:[m1[36m:[m [1m[31mDEP003[m 'urllib3' imported but it is a transitive dependency
+[1m[31mFound 17 dependency issues.[m
+
+For more information, see the documentation: https://deptry.com/

@@ -1,0 +1,11 @@
+Unused dependencies
+* @tailwindcss/postcss
+Unused devDependencies
+* @types/react
+* @types/react-dom
+* autoprefixer
+* postcss
+* tailwindcss
+Missing dependencies
+* puppeteer-core: .\runtime_verify_time.mjs
+* jszip: .\src\Dashboard.jsx

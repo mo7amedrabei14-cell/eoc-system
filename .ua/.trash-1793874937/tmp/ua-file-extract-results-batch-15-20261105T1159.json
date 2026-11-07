@@ -1,0 +1,334 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 6,
+  "filesSkipped": [
+    "output.txt",
+    "requirements.txt",
+    "seg-probe.html"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 6,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 6
+    }
+  },
+  "results": [
+    {
+      "path": "package.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "dependencies",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "devDependencies",
+          "level": 1,
+          "line": 5
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "plan.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 85,
+      "nonEmptyLines": 69,
+      "sections": [
+        {
+          "heading": "EOC Frontend Radical Visual Transformation - Implementation Plan",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Phase 1: AUDIT (COMPLETED)",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Phase 2: CREATE/UPGRADE Visual Design System (COMPLETED)",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "2.1 Spacing Scale Tokens ✅",
+          "level": 3,
+          "line": 10
+        },
+        {
+          "heading": "2.2 Typography Scale Tokens ✅",
+          "level": 3,
+          "line": 14
+        },
+        {
+          "heading": "2.3 Standardize Animation Durations ✅",
+          "level": 3,
+          "line": 19
+        },
+        {
+          "heading": "2.4 Enhance Motion Tokens ✅",
+          "level": 3,
+          "line": 28
+        },
+        {
+          "heading": "Phase 3: UPGRADE Global Shell (COMPLETED)",
+          "level": 2,
+          "line": 37
+        },
+        {
+          "heading": "Phase 4: UPGRADE Reusable Components (COMPLETED)",
+          "level": 2,
+          "line": 45
+        },
+        {
+          "heading": "Phase 5: UPGRADE Page Transitions & Motion",
+          "level": 2,
+          "line": 53
+        },
+        {
+          "heading": "Phase 6: UPGRADE Dashboard",
+          "level": 2,
+          "line": 58
+        },
+        {
+          "heading": "Phase 7: UPGRADE All Remaining Screens",
+          "level": 2,
+          "line": 64
+        },
+        {
+          "heading": "Phase 8: RESPONSIVE Pass",
+          "level": 2,
+          "line": 68
+        },
+        {
+          "heading": "Phase 9: DARK Mode Pass",
+          "level": 2,
+          "line": 72
+        },
+        {
+          "heading": "Phase 10: LIGHT Mode Pass",
+          "level": 2,
+          "line": 75
+        },
+        {
+          "heading": "Phase 11: PERFORMANCE Pass",
+          "level": 2,
+          "line": 78
+        },
+        {
+          "heading": "Phase 12: REGRESSION Verification",
+          "level": 2,
+          "line": 83
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 17
+      }
+    },
+    {
+      "path": "smoke_test_summary.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 65,
+      "nonEmptyLines": 51,
+      "sections": [
+        {
+          "heading": "Gemini Smoke Test Summary",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Verification Steps Performed",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Remaining Steps for a Real End-to-End Gemini Smoke Test",
+          "level": 2,
+          "line": 34
+        },
+        {
+          "heading": "Conclusion",
+          "level": 2,
+          "line": 50
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "vercel.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 51,
+      "nonEmptyLines": 51,
+      "sections": [
+        {
+          "heading": "builds",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "routes",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "headers",
+          "level": 1,
+          "line": 14
+        },
+        {
+          "heading": "git",
+          "level": 1,
+          "line": 41
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "weather_backfill_report.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 701,
+      "nonEmptyLines": 701,
+      "sections": [
+        {
+          "heading": "report_version",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "generated_at",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "database_source_of_truth",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "canonical_identity",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "data_source",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "configured_range",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "expected_location_count",
+          "level": 1,
+          "line": 11
+        },
+        {
+          "heading": "actual_location_count",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "location_count_matches_expected",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "summary",
+          "level": 1,
+          "line": 14
+        },
+        {
+          "heading": "locations",
+          "level": 1,
+          "line": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 11
+      }
+    },
+    {
+      "path": "wrangler.jsonc",
+      "language": "jsonc",
+      "fileCategory": "config",
+      "totalLines": 10,
+      "nonEmptyLines": 10,
+      "sections": [
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "main",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "compatibility_date",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "compatibility_flags",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "assets",
+          "level": 1,
+          "line": 6
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    }
+  ]
+}

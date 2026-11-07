@@ -1,0 +1,1350 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 17,
+  "filesSkipped": [
+    "frontend/_unz__s/docProps/core.xml",
+    "frontend/_unz__s/xl/_rels/workbook.xml.rels",
+    "frontend/_unz__s/xl/theme/theme1.xml",
+    "frontend/_unz__s/xl/worksheets/sheet1.xml",
+    "frontend/src/Dashboard.jsx.bak",
+    "frontend/src/login/loginScene.css",
+    "frontend/src/motion/authEntryTransition.css",
+    "frontend/src/motion/premiumPageTransitions.css"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 17,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 17,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": [
+    {
+      "path": "frontend/diag_tdz_order.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 97,
+      "nonEmptyLines": 88,
+      "functions": [
+        {
+          "name": "stripCode",
+          "startLine": 28,
+          "endLine": 63,
+          "params": [
+            "src"
+          ]
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/eslint.config.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 20,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/fix-logo-centering.cjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 167,
+      "nonEmptyLines": 151,
+      "functions": [
+        {
+          "name": "paeth",
+          "startLine": 47,
+          "endLine": 51,
+          "params": [
+            "a",
+            "b",
+            "c"
+          ]
+        },
+        {
+          "name": "crc32",
+          "startLine": 135,
+          "endLine": 139,
+          "params": [
+            "chunk"
+          ]
+        },
+        {
+          "name": "makeChunk",
+          "startLine": 140,
+          "endLine": 147,
+          "params": [
+            "type",
+            "data"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "paeth",
+          "callee": "Math.abs",
+          "lineNumber": 49
+        },
+        {
+          "caller": "paeth",
+          "callee": "Math.abs",
+          "lineNumber": 49
+        },
+        {
+          "caller": "paeth",
+          "callee": "Math.abs",
+          "lineNumber": 49
+        },
+        {
+          "caller": "makeChunk",
+          "callee": "Buffer.alloc",
+          "lineNumber": 141
+        },
+        {
+          "caller": "makeChunk",
+          "callee": "len.writeUInt32BE",
+          "lineNumber": 142
+        },
+        {
+          "caller": "makeChunk",
+          "callee": "Buffer.concat",
+          "lineNumber": 143
+        },
+        {
+          "caller": "makeChunk",
+          "callee": "Buffer.from",
+          "lineNumber": 143
+        },
+        {
+          "caller": "makeChunk",
+          "callee": "Buffer.alloc",
+          "lineNumber": 144
+        },
+        {
+          "caller": "makeChunk",
+          "callee": "crcBuf.writeUInt32BE",
+          "lineNumber": 145
+        },
+        {
+          "caller": "makeChunk",
+          "callee": "crc32",
+          "lineNumber": 145
+        },
+        {
+          "caller": "makeChunk",
+          "callee": "Buffer.concat",
+          "lineNumber": 146
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/postcss.config.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 6,
+      "nonEmptyLines": 6,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/runtime_verify_time.mjs",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 228,
+      "nonEmptyLines": 211,
+      "functions": [
+        {
+          "name": "apiPayload",
+          "startLine": 34,
+          "endLine": 48,
+          "params": [
+            "url"
+          ]
+        },
+        {
+          "name": "check",
+          "startLine": 84,
+          "endLine": 87,
+          "params": [
+            "name",
+            "cond"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 35
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 35
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 36
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 36
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 37
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 37
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 38
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 38
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 39
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 39
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 40
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 40
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 41
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 41
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 42
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 42
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 43
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 43
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 44
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 44
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 45
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 45
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "url.includes",
+          "lineNumber": 46
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 46
+        },
+        {
+          "caller": "apiPayload",
+          "callee": "JSON.stringify",
+          "lineNumber": 47
+        },
+        {
+          "caller": "check",
+          "callee": "console.log",
+          "lineNumber": 85
+        },
+        {
+          "caller": "check",
+          "callee": "console.log",
+          "lineNumber": 86
+        },
+        {
+          "caller": "clickBtnAt",
+          "callee": "page.evaluate",
+          "lineNumber": 172
+        },
+        {
+          "caller": "clickBtnAt",
+          "callee": "[...document.querySelectorAll('button')].find",
+          "lineNumber": 173
+        },
+        {
+          "caller": "clickBtnAt",
+          "callee": "document.querySelectorAll",
+          "lineNumber": 173
+        },
+        {
+          "caller": "clickBtnAt",
+          "callee": "(b.textContent || '').trim",
+          "lineNumber": 173
+        },
+        {
+          "caller": "clickBtnAt",
+          "callee": "btn.closest",
+          "lineNumber": 175
+        },
+        {
+          "caller": "clickBtnAt",
+          "callee": "pop.querySelectorAll",
+          "lineNumber": 176
+        },
+        {
+          "caller": "clickBtnAt",
+          "callee": "target.dispatchEvent",
+          "lineNumber": 179
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/__tests__/dashboardDataLoading.test.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 46,
+      "nonEmptyLines": 40,
+      "functions": [
+        {
+          "name": "read",
+          "startLine": 5,
+          "endLine": 5,
+          "params": [
+            "relativePath"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "read",
+          "callee": "readFileSync",
+          "lineNumber": 5
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/__tests__/ownerMessagesDelivery.test.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 35,
+      "nonEmptyLines": 30,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessReturnNotesLayout.test.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 18,
+      "nonEmptyLines": 14,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/__tests__/workingToast.test.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 111,
+      "nonEmptyLines": 100,
+      "functions": [
+        {
+          "name": "fireDoc",
+          "startLine": 6,
+          "endLine": 6,
+          "params": [
+            "type",
+            "target"
+          ]
+        },
+        {
+          "name": "sleep",
+          "startLine": 25,
+          "endLine": 25,
+          "params": [
+            "ms"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fireDoc",
+          "callee": "docListeners.get",
+          "lineNumber": 6
+        },
+        {
+          "caller": "fireDoc",
+          "callee": "fn",
+          "lineNumber": 6
+        },
+        {
+          "caller": "sleep",
+          "callee": "setTimeout",
+          "lineNumber": 25
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/_p2.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/activityMap.old.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 812,
+      "nonEmptyLines": 807,
+      "functions": [
+        {
+          "name": "clean",
+          "startLine": 789,
+          "endLine": 795,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "classifyActivity",
+          "startLine": 804,
+          "endLine": 812,
+          "params": [
+            "missionName"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "classifyActivity",
+          "line": 804,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "clean",
+          "callee": "String(s == null ? '' : s)\r\n  .replace(/[\\u0640\\u064B-\\u0652\\u0670]/g, '')   // تطويل + تشكيل\r\n  .replace(/[أإآٱا]/g, 'ا')\r\n  .replace(/[ىيئ]/g, 'ي')\r\n  .replace(/ة/g, 'ه')\r\n  .replace(/\\s+/g, '')\r\n  .toLowerCase",
+          "lineNumber": 789
+        },
+        {
+          "caller": "clean",
+          "callee": "String(s == null ? '' : s)\r\n  .replace(/[\\u0640\\u064B-\\u0652\\u0670]/g, '')   // تطويل + تشكيل\r\n  .replace(/[أإآٱا]/g, 'ا')\r\n  .replace(/[ىيئ]/g, 'ي')\r\n  .replace(/ة/g, 'ه')\r\n  .replace",
+          "lineNumber": 789
+        },
+        {
+          "caller": "clean",
+          "callee": "String(s == null ? '' : s)\r\n  .replace(/[\\u0640\\u064B-\\u0652\\u0670]/g, '')   // تطويل + تشكيل\r\n  .replace(/[أإآٱا]/g, 'ا')\r\n  .replace(/[ىيئ]/g, 'ي')\r\n  .replace",
+          "lineNumber": 789
+        },
+        {
+          "caller": "clean",
+          "callee": "String(s == null ? '' : s)\r\n  .replace(/[\\u0640\\u064B-\\u0652\\u0670]/g, '')   // تطويل + تشكيل\r\n  .replace(/[أإآٱا]/g, 'ا')\r\n  .replace",
+          "lineNumber": 789
+        },
+        {
+          "caller": "clean",
+          "callee": "String(s == null ? '' : s)\r\n  .replace(/[\\u0640\\u064B-\\u0652\\u0670]/g, '')   // تطويل + تشكيل\r\n  .replace",
+          "lineNumber": 789
+        },
+        {
+          "caller": "clean",
+          "callee": "String(s == null ? '' : s)\r\n  .replace",
+          "lineNumber": 789
+        },
+        {
+          "caller": "clean",
+          "callee": "String",
+          "lineNumber": 789
+        },
+        {
+          "caller": "classifyActivity",
+          "callee": "clean",
+          "lineNumber": 805
+        },
+        {
+          "caller": "classifyActivity",
+          "callee": "text.includes",
+          "lineNumber": 809
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/build_activity_map.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 253,
+      "nonEmptyLines": 220,
+      "functions": [
+        {
+          "name": "norm",
+          "startLine": 45,
+          "endLine": 53,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "_strip_open_day",
+          "startLine": 55,
+          "endLine": 64,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "key_from_norm",
+          "startLine": 66,
+          "endLine": 76,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "clean",
+          "startLine": 78,
+          "endLine": 79,
+          "params": [
+            "v"
+          ]
+        },
+        {
+          "name": "load_source",
+          "startLine": 82,
+          "endLine": 89,
+          "params": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "norm",
+          "line": 45,
+          "isDefault": false
+        },
+        {
+          "name": "_strip_open_day",
+          "line": 55,
+          "isDefault": false
+        },
+        {
+          "name": "key_from_norm",
+          "line": 66,
+          "isDefault": false
+        },
+        {
+          "name": "clean",
+          "line": 78,
+          "isDefault": false
+        },
+        {
+          "name": "load_source",
+          "line": 82,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "norm",
+          "callee": "str",
+          "lineNumber": 46
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 47
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 48
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 49
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 50
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 51
+        },
+        {
+          "caller": "norm",
+          "callee": "DASH.sub",
+          "lineNumber": 52
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub(r\"\\s+\", \" \", s).strip",
+          "lineNumber": 53
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 53
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "s.rfind",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "s[i + 6:].strip",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "tail.split",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "len",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "all",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "DAYISH.match",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "s[:i].strip",
+          "lineNumber": 63
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "range",
+          "lineNumber": 68
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "re.sub",
+          "lineNumber": 69
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "re.sub",
+          "lineNumber": 70
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "re.sub(r\"\\s*\\d{4}\\s*-\\s*\\d{1,2}\\s*-\\s*\\d{1,2}\\s*$\", \"\", s).strip",
+          "lineNumber": 71
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "re.sub",
+          "lineNumber": 71
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "_strip_open_day",
+          "lineNumber": 72
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "re.split",
+          "lineNumber": 73
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "len",
+          "lineNumber": 74
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "parts[-1].strip",
+          "lineNumber": 75
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "re.split(r\"\\s*-\\s*\", s, maxsplit=1)[0].strip",
+          "lineNumber": 76
+        },
+        {
+          "caller": "key_from_norm",
+          "callee": "re.split",
+          "lineNumber": 76
+        },
+        {
+          "caller": "clean",
+          "callee": "re.sub(r\"\\s+\", \" \", str(v)).strip",
+          "lineNumber": 79
+        },
+        {
+          "caller": "clean",
+          "callee": "re.sub",
+          "lineNumber": 79
+        },
+        {
+          "caller": "clean",
+          "callee": "str",
+          "lineNumber": 79
+        },
+        {
+          "caller": "load_source",
+          "callee": "load_workbook",
+          "lineNumber": 84
+        },
+        {
+          "caller": "load_source",
+          "callee": "Path",
+          "lineNumber": 86
+        },
+        {
+          "caller": "load_source",
+          "callee": "tempfile.gettempdir",
+          "lineNumber": 86
+        },
+        {
+          "caller": "load_source",
+          "callee": "shutil.copy2",
+          "lineNumber": 87
+        },
+        {
+          "caller": "load_source",
+          "callee": "print",
+          "lineNumber": 88
+        },
+        {
+          "caller": "load_source",
+          "callee": "load_workbook",
+          "lineNumber": 89
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/clean_membership.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 136,
+      "nonEmptyLines": 121,
+      "functions": [
+        {
+          "name": "build",
+          "startLine": 27,
+          "endLine": 44,
+          "params": [
+            "branches"
+          ]
+        },
+        {
+          "name": "finalize",
+          "startLine": 46,
+          "endLine": 51,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "plan",
+          "startLine": 53,
+          "endLine": 66,
+          "params": [
+            "val",
+            "pat"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "build",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "finalize",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "plan",
+          "line": 53,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "build",
+          "callee": "set",
+          "lineNumber": 29
+        },
+        {
+          "caller": "build",
+          "callee": "(b or '').strip",
+          "lineNumber": 31
+        },
+        {
+          "caller": "build",
+          "callee": "b.startswith",
+          "lineNumber": 33
+        },
+        {
+          "caller": "build",
+          "callee": "len",
+          "lineNumber": 33
+        },
+        {
+          "caller": "build",
+          "callee": "out.append",
+          "lineNumber": 37
+        },
+        {
+          "caller": "build",
+          "callee": "out.append",
+          "lineNumber": 38
+        },
+        {
+          "caller": "build",
+          "callee": "out.append",
+          "lineNumber": 39
+        },
+        {
+          "caller": "build",
+          "callee": "ch.isspace",
+          "lineNumber": 40
+        },
+        {
+          "caller": "build",
+          "callee": "out.append",
+          "lineNumber": 40
+        },
+        {
+          "caller": "build",
+          "callee": "out.append",
+          "lineNumber": 41
+        },
+        {
+          "caller": "build",
+          "callee": "re.escape",
+          "lineNumber": 41
+        },
+        {
+          "caller": "build",
+          "callee": "alts.add",
+          "lineNumber": 42
+        },
+        {
+          "caller": "build",
+          "callee": "''.join",
+          "lineNumber": 42
+        },
+        {
+          "caller": "build",
+          "callee": "'|'.join",
+          "lineNumber": 43
+        },
+        {
+          "caller": "build",
+          "callee": "sorted",
+          "lineNumber": 43
+        },
+        {
+          "caller": "build",
+          "callee": "re.compile",
+          "lineNumber": 44
+        },
+        {
+          "caller": "finalize",
+          "callee": "re.sub",
+          "lineNumber": 47
+        },
+        {
+          "caller": "finalize",
+          "callee": "re.sub(r'\\s{2,}', ' ', s).strip",
+          "lineNumber": 48
+        },
+        {
+          "caller": "finalize",
+          "callee": "re.sub",
+          "lineNumber": 48
+        },
+        {
+          "caller": "finalize",
+          "callee": "re.sub",
+          "lineNumber": 49
+        },
+        {
+          "caller": "finalize",
+          "callee": "re.sub",
+          "lineNumber": 50
+        },
+        {
+          "caller": "finalize",
+          "callee": "s.strip",
+          "lineNumber": 51
+        },
+        {
+          "caller": "plan",
+          "callee": "str",
+          "lineNumber": 55
+        },
+        {
+          "caller": "plan",
+          "callee": "raw.strip",
+          "lineNumber": 56
+        },
+        {
+          "caller": "plan",
+          "callee": "finalize",
+          "lineNumber": 57
+        },
+        {
+          "caller": "plan",
+          "callee": "pat.sub",
+          "lineNumber": 57
+        },
+        {
+          "caller": "plan",
+          "callee": "pat.sub",
+          "lineNumber": 57
+        },
+        {
+          "caller": "plan",
+          "callee": "re.search",
+          "lineNumber": 60
+        },
+        {
+          "caller": "plan",
+          "callee": "re.search",
+          "lineNumber": 60
+        },
+        {
+          "caller": "plan",
+          "callee": "re.sub",
+          "lineNumber": 62
+        },
+        {
+          "caller": "plan",
+          "callee": "re.sub(r'[\\s\\u060C,\\.\\-–—_\\(\\)\\[\\]\\{\\}\"\\'«»/\\\\|:؛]+', ' ', rest).strip",
+          "lineNumber": 63
+        },
+        {
+          "caller": "plan",
+          "callee": "re.sub",
+          "lineNumber": 63
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/daily_check.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 96,
+      "nonEmptyLines": 81,
+      "functions": [
+        {
+          "name": "norm",
+          "startLine": 22,
+          "endLine": 29,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "_strip_open_day",
+          "startLine": 31,
+          "endLine": 37,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "key_from",
+          "startLine": 39,
+          "endLine": 49,
+          "params": [
+            "name"
+          ]
+        },
+        {
+          "name": "clean",
+          "startLine": 51,
+          "endLine": 52,
+          "params": [
+            "v"
+          ]
+        },
+        {
+          "name": "has_word",
+          "startLine": 54,
+          "endLine": 55,
+          "params": [
+            "hay",
+            "needle"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "norm",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "_strip_open_day",
+          "line": 31,
+          "isDefault": false
+        },
+        {
+          "name": "key_from",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "clean",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "has_word",
+          "line": 54,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "norm",
+          "callee": "str",
+          "lineNumber": 23
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 24
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 25
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 26
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 27
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 28
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub(r\"\\s+\", \" \", DASH.sub(\"-\", s)).strip",
+          "lineNumber": 29
+        },
+        {
+          "caller": "norm",
+          "callee": "re.sub",
+          "lineNumber": 29
+        },
+        {
+          "caller": "norm",
+          "callee": "DASH.sub",
+          "lineNumber": 29
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "s.rfind",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "s[i + 6:].strip",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "tail.split",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "s[:i].strip",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "len",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "all",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_strip_open_day",
+          "callee": "DAYISH.match",
+          "lineNumber": 37
+        },
+        {
+          "caller": "key_from",
+          "callee": "norm",
+          "lineNumber": 40
+        },
+        {
+          "caller": "key_from",
+          "callee": "range",
+          "lineNumber": 41
+        },
+        {
+          "caller": "key_from",
+          "callee": "re.sub",
+          "lineNumber": 42
+        },
+        {
+          "caller": "key_from",
+          "callee": "re.sub",
+          "lineNumber": 43
+        },
+        {
+          "caller": "key_from",
+          "callee": "re.sub(r\"\\s*\\d{4}\\s*-\\s*\\d{1,2}\\s*-\\s*\\d{1,2}\\s*$\", \"\", s).strip",
+          "lineNumber": 44
+        },
+        {
+          "caller": "key_from",
+          "callee": "re.sub",
+          "lineNumber": 44
+        },
+        {
+          "caller": "key_from",
+          "callee": "_strip_open_day",
+          "lineNumber": 45
+        },
+        {
+          "caller": "key_from",
+          "callee": "re.split",
+          "lineNumber": 46
+        },
+        {
+          "caller": "key_from",
+          "callee": "len",
+          "lineNumber": 47
+        },
+        {
+          "caller": "key_from",
+          "callee": "parts[-1].strip",
+          "lineNumber": 48
+        },
+        {
+          "caller": "key_from",
+          "callee": "re.split(r\"\\s*-\\s*\", s, maxsplit=1)[0].strip",
+          "lineNumber": 49
+        },
+        {
+          "caller": "key_from",
+          "callee": "re.split",
+          "lineNumber": 49
+        },
+        {
+          "caller": "clean",
+          "callee": "re.sub(r\"\\s+\", \" \", str(v)).strip",
+          "lineNumber": 52
+        },
+        {
+          "caller": "clean",
+          "callee": "re.sub",
+          "lineNumber": 52
+        },
+        {
+          "caller": "clean",
+          "callee": "str",
+          "lineNumber": 52
+        },
+        {
+          "caller": "has_word",
+          "callee": "f\" {hay} \".find",
+          "lineNumber": 55
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/fix_modals.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 164,
+      "nonEmptyLines": 145,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/tailwind.config.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 11,
+      "nonEmptyLines": 11,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/vite.config.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 44,
+      "nonEmptyLines": 43,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

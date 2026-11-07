@@ -1,0 +1,332 @@
+{
+    "nodes":  [
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/476e697f4d801cdf_0",
+                      "type":  "file",
+                      "name":  "476e697f4d801cdf_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/476e697f4d801cdf_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/47e9027527443bdb_0",
+                      "type":  "file",
+                      "name":  "47e9027527443bdb_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/47e9027527443bdb_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/49ce613c8f5fe922_0",
+                      "type":  "file",
+                      "name":  "49ce613c8f5fe922_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/49ce613c8f5fe922_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/55d96aeffbe066fc_0",
+                      "type":  "file",
+                      "name":  "55d96aeffbe066fc_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/55d96aeffbe066fc_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/568f80ad67cad4da_0",
+                      "type":  "file",
+                      "name":  "568f80ad67cad4da_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/568f80ad67cad4da_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/5729a4c3d436fecc_0",
+                      "type":  "file",
+                      "name":  "5729a4c3d436fecc_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/5729a4c3d436fecc_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/6e9348d0e624d722_0",
+                      "type":  "file",
+                      "name":  "6e9348d0e624d722_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/6e9348d0e624d722_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/74cdeb79cc6ac7c0_0",
+                      "type":  "file",
+                      "name":  "74cdeb79cc6ac7c0_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/74cdeb79cc6ac7c0_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/7be6358861894a7d_0",
+                      "type":  "file",
+                      "name":  "7be6358861894a7d_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/7be6358861894a7d_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/7ce3d2392f9452c7_0",
+                      "type":  "file",
+                      "name":  "7ce3d2392f9452c7_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/7ce3d2392f9452c7_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/7f1237c4b801c4da_0",
+                      "type":  "file",
+                      "name":  "7f1237c4b801c4da_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/7f1237c4b801c4da_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/7fa657661e2beb31_0",
+                      "type":  "file",
+                      "name":  "7fa657661e2beb31_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/7fa657661e2beb31_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/8fc2f58fdafbb7b5_0",
+                      "type":  "file",
+                      "name":  "8fc2f58fdafbb7b5_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/8fc2f58fdafbb7b5_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/9a9073055345fb52_0",
+                      "type":  "file",
+                      "name":  "9a9073055345fb52_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/9a9073055345fb52_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/9b9aad443b9e7dc0_0",
+                      "type":  "file",
+                      "name":  "9b9aad443b9e7dc0_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/9b9aad443b9e7dc0_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/ad0eaaf2bc648774_0",
+                      "type":  "file",
+                      "name":  "ad0eaaf2bc648774_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/ad0eaaf2bc648774_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/afa30a55c1b37597_0",
+                      "type":  "file",
+                      "name":  "afa30a55c1b37597_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/afa30a55c1b37597_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/b56e39a1c556c3b6_0",
+                      "type":  "file",
+                      "name":  "b56e39a1c556c3b6_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/b56e39a1c556c3b6_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/b763c5353448477b_0",
+                      "type":  "file",
+                      "name":  "b763c5353448477b_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/b763c5353448477b_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/cc59708e33c0a9f6_0",
+                      "type":  "file",
+                      "name":  "cc59708e33c0a9f6_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/cc59708e33c0a9f6_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/dd0d70889624e239_0",
+                      "type":  "file",
+                      "name":  "dd0d70889624e239_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/dd0d70889624e239_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/e50ef9b991441529_0",
+                      "type":  "file",
+                      "name":  "e50ef9b991441529_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/e50ef9b991441529_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/eea795006b015923_0",
+                      "type":  "file",
+                      "name":  "eea795006b015923_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/eea795006b015923_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/f24fd9dbe113b6f7_0",
+                      "type":  "file",
+                      "name":  "f24fd9dbe113b6f7_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/f24fd9dbe113b6f7_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:_shot_profile/Default/Code Cache/js/fa9e00dbd8004d99_0",
+                      "type":  "file",
+                      "name":  "fa9e00dbd8004d99_0",
+                      "filePath":  "_shot_profile/Default/Code Cache/js/fa9e00dbd8004d99_0",
+                      "summary":  "Opaque JavaScript code-cache artifact stored in the browser profile. Structural extraction found no parseable source or symbols.",
+                      "tags":  [
+                                   "code-cache",
+                                   "javascript",
+                                   "generated-artifact"
+                               ],
+                      "complexity":  "simple"
+                  }
+              ],
+    "edges":  [
+
+              ]
+}

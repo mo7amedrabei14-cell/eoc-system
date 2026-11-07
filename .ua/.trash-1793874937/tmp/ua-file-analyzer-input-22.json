@@ -1,0 +1,174 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 22,
+  "batchFiles": [
+    {
+      "path": "perf/harsh22_before_blocked_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_blocked_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_blocked_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_ready_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_ready_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_ready_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_settled_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_settled_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_before_settled_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_trace_after.json",
+      "language": "json",
+      "sizeLines": 102,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh22_trace_before.json",
+      "language": "json",
+      "sizeLines": 84,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_after22_login_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_after22_login_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_after22_login_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_before_login_1.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_before_login_2.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/harsh_before_login_3.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_1.json",
+      "language": "json",
+      "sizeLines": 5093,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_2.json",
+      "language": "json",
+      "sizeLines": 4861,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_3.json",
+      "language": "json",
+      "sizeLines": 5044,
+      "fileCategory": "config"
+    }
+  ],
+  "batchImportData": {
+    "perf/harsh22_before_blocked_1.json": [],
+    "perf/harsh22_before_blocked_2.json": [],
+    "perf/harsh22_before_blocked_3.json": [],
+    "perf/harsh22_before_ready_1.json": [],
+    "perf/harsh22_before_ready_2.json": [],
+    "perf/harsh22_before_ready_3.json": [],
+    "perf/harsh22_before_settled_1.json": [],
+    "perf/harsh22_before_settled_2.json": [],
+    "perf/harsh22_before_settled_3.json": [],
+    "perf/harsh22_trace_after.json": [],
+    "perf/harsh22_trace_before.json": [],
+    "perf/harsh_after22_login_1.json": [],
+    "perf/harsh_after22_login_2.json": [],
+    "perf/harsh_after22_login_3.json": [],
+    "perf/harsh_before_login_1.json": [],
+    "perf/harsh_before_login_2.json": [],
+    "perf/harsh_before_login_3.json": [],
+    "perf/lh22_after_blocked_1.json": [],
+    "perf/lh22_after_blocked_2.json": [],
+    "perf/lh22_after_blocked_3.json": []
+  },
+  "neighborMap": {}
+}

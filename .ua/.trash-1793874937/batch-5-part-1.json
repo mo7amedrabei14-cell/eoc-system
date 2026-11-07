@@ -1,0 +1,719 @@
+{
+  "nodes": [
+    {
+      "id": "file:audit.py",
+      "type": "file",
+      "name": "audit.py",
+      "filePath": "audit.py",
+      "summary": "Writes audit records and can emit a matching realtime event within the same transaction.",
+      "tags": [
+        "audit-logging",
+        "security",
+        "realtime-events"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:backfill_world_catalog.py",
+      "type": "file",
+      "name": "backfill_world_catalog.py",
+      "filePath": "backfill_world_catalog.py",
+      "summary": "Fetches historical world-catalog features, avoids already populated year windows, and loads missing data into the project database.",
+      "tags": [
+        "data-pipeline",
+        "world-catalog",
+        "backfill"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:dependencies.py",
+      "type": "file",
+      "name": "dependencies.py",
+      "filePath": "dependencies.py",
+      "summary": "Provides database-session and authenticated-user dependencies, plus a reusable permission guard for API routes.",
+      "tags": [
+        "authentication",
+        "authorization",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:fix_emsc_links.py",
+      "type": "file",
+      "name": "fix_emsc_links.py",
+      "filePath": "fix_emsc_links.py",
+      "summary": "Repairs stored earthquake-monitoring detail links with a set-based database update.",
+      "tags": [
+        "database",
+        "maintenance",
+        "emsc-links"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:realtime.py",
+      "type": "file",
+      "name": "realtime.py",
+      "filePath": "realtime.py",
+      "summary": "Creates mission-related realtime events, detects duplicate logical actions, and routes notifications to the relevant accounts.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:audit.py:audit_value",
+      "type": "function",
+      "name": "audit_value",
+      "filePath": "audit.py",
+      "lineRange": [
+        8,
+        12
+      ],
+      "summary": "Converts values used in audit details to a JSON-compatible representation.",
+      "tags": [
+        "audit-logging",
+        "security",
+        "realtime-events"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:audit.py:create_audit_log",
+      "type": "function",
+      "name": "create_audit_log",
+      "filePath": "audit.py",
+      "lineRange": [
+        18,
+        99
+      ],
+      "summary": "Writes an audit record and optionally creates a realtime event within the same transaction.",
+      "tags": [
+        "audit-logging",
+        "security",
+        "realtime-events"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:backfill_world_catalog.py:get_connection",
+      "type": "function",
+      "name": "get_connection",
+      "filePath": "backfill_world_catalog.py",
+      "lineRange": [
+        48,
+        51
+      ],
+      "summary": "Opens the project database connection using the configured connection strategy.",
+      "tags": [
+        "data-pipeline",
+        "world-catalog",
+        "backfill"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:backfill_world_catalog.py:fetch_year_features",
+      "type": "function",
+      "name": "fetch_year_features",
+      "filePath": "backfill_world_catalog.py",
+      "lineRange": [
+        54,
+        70
+      ],
+      "summary": "Fetches world-catalog features for a requested year from the external catalog service.",
+      "tags": [
+        "data-pipeline",
+        "world-catalog",
+        "backfill"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:backfill_world_catalog.py:_find_filled_year_window_indexes",
+      "type": "function",
+      "name": "_find_filled_year_window_indexes",
+      "filePath": "backfill_world_catalog.py",
+      "lineRange": [
+        73,
+        98
+      ],
+      "summary": "Identifies year-window positions that already contain world-catalog data.",
+      "tags": [
+        "data-pipeline",
+        "world-catalog",
+        "backfill"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:backfill_world_catalog.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "backfill_world_catalog.py",
+      "lineRange": [
+        101,
+        204
+      ],
+      "summary": "Runs the query-optimization test suite when invoked as a script.",
+      "tags": [
+        "data-pipeline",
+        "world-catalog",
+        "backfill"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:dependencies.py:get_db",
+      "type": "function",
+      "name": "get_db",
+      "filePath": "dependencies.py",
+      "lineRange": [
+        10,
+        19
+      ],
+      "summary": "Yields a database connection/session for API dependency injection.",
+      "tags": [
+        "authentication",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:dependencies.py:get_current_user",
+      "type": "function",
+      "name": "get_current_user",
+      "filePath": "dependencies.py",
+      "lineRange": [
+        21,
+        30
+      ],
+      "summary": "Resolves the authenticated user for a request.",
+      "tags": [
+        "authentication",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:dependencies.py:RequirePermission",
+      "type": "class",
+      "name": "RequirePermission",
+      "filePath": "dependencies.py",
+      "lineRange": [
+        32,
+        42
+      ],
+      "summary": "Reusable API dependency that enforces a configured permission before allowing a request.",
+      "tags": [
+        "authentication",
+        "authorization",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:fix_emsc_links.py:update_emsc_detail_links",
+      "type": "function",
+      "name": "update_emsc_detail_links",
+      "filePath": "fix_emsc_links.py",
+      "lineRange": [
+        5,
+        37
+      ],
+      "summary": "Updates eligible earthquake detail links using one set-based database statement.",
+      "tags": [
+        "database",
+        "maintenance",
+        "emsc-links"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:fix_emsc_links.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "fix_emsc_links.py",
+      "lineRange": [
+        40,
+        59
+      ],
+      "summary": "Runs the query-optimization test suite when invoked as a script.",
+      "tags": [
+        "database",
+        "maintenance",
+        "emsc-links"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:realtime.py:_normalize_action",
+      "type": "function",
+      "name": "_normalize_action",
+      "filePath": "realtime.py",
+      "lineRange": [
+        49,
+        62
+      ],
+      "summary": "Normalizes action text so equivalent event descriptions can be compared consistently.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:realtime.py:_strip_scope",
+      "type": "function",
+      "name": "_strip_scope",
+      "filePath": "realtime.py",
+      "lineRange": [
+        65,
+        67
+      ],
+      "summary": "Removes scope wording from an action before logical-duplicate comparison.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:realtime.py:is_same_logical_action",
+      "type": "function",
+      "name": "is_same_logical_action",
+      "filePath": "realtime.py",
+      "lineRange": [
+        70,
+        88
+      ],
+      "summary": "Determines whether two action descriptions represent the same logical event.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:realtime.py:get_latest_recent_event_action",
+      "type": "function",
+      "name": "get_latest_recent_event_action",
+      "filePath": "realtime.py",
+      "lineRange": [
+        92,
+        123
+      ],
+      "summary": "Loads the latest recent event action for a deduplication scope.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:realtime.py:is_recent_duplicate_action",
+      "type": "function",
+      "name": "is_recent_duplicate_action",
+      "filePath": "realtime.py",
+      "lineRange": [
+        126,
+        137
+      ],
+      "summary": "Checks whether an earlier action is a duplicate within the configured time window.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:realtime.py:find_recent_duplicate_target_ids",
+      "type": "function",
+      "name": "find_recent_duplicate_target_ids",
+      "filePath": "realtime.py",
+      "lineRange": [
+        140,
+        177
+      ],
+      "summary": "Finds recipients whose latest recent event already represents the action.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:realtime.py:resolve_mission_creator",
+      "type": "function",
+      "name": "resolve_mission_creator",
+      "filePath": "realtime.py",
+      "lineRange": [
+        180,
+        197
+      ],
+      "summary": "Resolves the user who created a mission from its event history.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:realtime.py:notify_participant_accounts",
+      "type": "function",
+      "name": "notify_participant_accounts",
+      "filePath": "realtime.py",
+      "lineRange": [
+        200,
+        251
+      ],
+      "summary": "Sends a targeted notification to participant accounts affected by a mission change.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:realtime.py:create_realtime_event",
+      "type": "function",
+      "name": "create_realtime_event",
+      "filePath": "realtime.py",
+      "lineRange": [
+        254,
+        334
+      ],
+      "summary": "Creates the realtime event for a change while preserving transaction and recipient semantics.",
+      "tags": [
+        "realtime-events",
+        "notifications",
+        "deduplication"
+      ],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:audit.py",
+      "target": "function:audit.py:audit_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:audit.py",
+      "target": "function:audit.py:audit_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:audit.py",
+      "target": "function:audit.py:create_audit_log",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:audit.py",
+      "target": "function:audit.py:create_audit_log",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backfill_world_catalog.py",
+      "target": "function:backfill_world_catalog.py:get_connection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backfill_world_catalog.py",
+      "target": "function:backfill_world_catalog.py:get_connection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backfill_world_catalog.py",
+      "target": "function:backfill_world_catalog.py:fetch_year_features",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backfill_world_catalog.py",
+      "target": "function:backfill_world_catalog.py:fetch_year_features",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backfill_world_catalog.py",
+      "target": "function:backfill_world_catalog.py:_find_filled_year_window_indexes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backfill_world_catalog.py",
+      "target": "function:backfill_world_catalog.py:_find_filled_year_window_indexes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backfill_world_catalog.py",
+      "target": "function:backfill_world_catalog.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backfill_world_catalog.py",
+      "target": "function:backfill_world_catalog.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:dependencies.py",
+      "target": "function:dependencies.py:get_db",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:dependencies.py",
+      "target": "function:dependencies.py:get_db",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:dependencies.py",
+      "target": "function:dependencies.py:get_current_user",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:dependencies.py",
+      "target": "function:dependencies.py:get_current_user",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:dependencies.py",
+      "target": "class:dependencies.py:RequirePermission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:dependencies.py",
+      "target": "class:dependencies.py:RequirePermission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:fix_emsc_links.py",
+      "target": "function:fix_emsc_links.py:update_emsc_detail_links",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:fix_emsc_links.py",
+      "target": "function:fix_emsc_links.py:update_emsc_detail_links",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:fix_emsc_links.py",
+      "target": "function:fix_emsc_links.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:fix_emsc_links.py",
+      "target": "function:fix_emsc_links.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:_normalize_action",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:_normalize_action",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:_strip_scope",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:_strip_scope",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:is_same_logical_action",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:is_same_logical_action",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:get_latest_recent_event_action",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:get_latest_recent_event_action",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:is_recent_duplicate_action",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:is_recent_duplicate_action",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:find_recent_duplicate_target_ids",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:find_recent_duplicate_target_ids",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:resolve_mission_creator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:resolve_mission_creator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:notify_participant_accounts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:notify_participant_accounts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:create_realtime_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:realtime.py",
+      "target": "function:realtime.py:create_realtime_event",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:audit.py",
+      "target": "file:realtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:dependencies.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:dependencies.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:fix_emsc_links.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

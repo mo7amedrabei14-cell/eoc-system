@@ -1,0 +1,1616 @@
+{
+    "nodes":  [
+                  {
+                      "id":  "file:frontend/src/App.jsx",
+                      "type":  "file",
+                      "name":  "App.jsx",
+                      "filePath":  "frontend/src/App.jsx",
+                      "summary":  "Application entry point that composes routing, shared UI layers, authentication transitions, and dashboard route fallbacks.",
+                      "tags":  [
+                                   "entry-point",
+                                   "routing",
+                                   "component",
+                                   "motion"
+                               ],
+                      "complexity":  "complex"
+                  },
+                  {
+                      "id":  "file:frontend/src/ERCVectorLogo.jsx",
+                      "type":  "file",
+                      "name":  "ERCVectorLogo.jsx",
+                      "filePath":  "frontend/src/ERCVectorLogo.jsx",
+                      "summary":  "Reusable, accessible SVG rendering of the Egyptian Red Crescent emblem for application branding and transitions.",
+                      "tags":  [
+                                   "component",
+                                   "branding",
+                                   "svg",
+                                   "accessibility"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:frontend/src/Login.jsx",
+                      "type":  "file",
+                      "name":  "Login.jsx",
+                      "filePath":  "frontend/src/Login.jsx",
+                      "summary":  "Implements the interactive sign-in experience, including credential submission, additional verification flow, server-status feedback, and animated presentation controls.",
+                      "tags":  [
+                                   "component",
+                                   "authentication",
+                                   "form",
+                                   "motion",
+                                   "server-health"
+                               ],
+                      "complexity":  "complex"
+                  },
+                  {
+                      "id":  "file:frontend/src/__tests__/motionAudit.test.js",
+                      "type":  "file",
+                      "name":  "motionAudit.test.js",
+                      "filePath":  "frontend/src/__tests__/motionAudit.test.js",
+                      "summary":  "Node test suite auditing motion CSS ownership, reduced-motion behavior, route transitions, and key authentication-transition integration contracts.",
+                      "tags":  [
+                                   "test",
+                                   "motion",
+                                   "integration",
+                                   "accessibility"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "file:frontend/src/__tests__/serverHealthCore.test.js",
+                      "type":  "file",
+                      "name":  "serverHealthCore.test.js",
+                      "filePath":  "frontend/src/__tests__/serverHealthCore.test.js",
+                      "summary":  "Node tests covering health-check classification, consecutive-failure thresholds, recovery detection, timeout handling, and endpoint response behavior.",
+                      "tags":  [
+                                   "test",
+                                   "server-health",
+                                   "unit-test",
+                                   "recovery"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "file:frontend/src/components/CustomTooltipLayer.jsx",
+                      "type":  "file",
+                      "name":  "CustomTooltipLayer.jsx",
+                      "filePath":  "frontend/src/components/CustomTooltipLayer.jsx",
+                      "summary":  "Provides a portal-based tooltip layer that positions labels for pointer and keyboard focus while preserving native title and accessibility descriptions.",
+                      "tags":  [
+                                   "component",
+                                   "tooltip",
+                                   "accessibility",
+                                   "portal"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "file:frontend/src/components/WorkingToast.jsx",
+                      "type":  "file",
+                      "name":  "WorkingToast.jsx",
+                      "filePath":  "frontend/src/components/WorkingToast.jsx",
+                      "summary":  "Renders the shared working-status toast in response to show and hide browser events.",
+                      "tags":  [
+                                   "component",
+                                   "status",
+                                   "toast",
+                                   "event-handler"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "file:frontend/src/motion/AnimatedNumber.jsx",
+                      "type":  "file",
+                      "name":  "AnimatedNumber.jsx",
+                      "filePath":  "frontend/src/motion/AnimatedNumber.jsx",
+                      "summary":  "Animates numeric display values with a spring while preserving formatting and rendering non-numeric text unchanged.",
+                      "tags":  [
+                                   "component",
+                                   "animation",
+                                   "formatting",
+                                   "accessibility"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "type":  "file",
+                      "name":  "AuthEntryTransition.jsx",
+                      "filePath":  "frontend/src/motion/AuthEntryTransition.jsx",
+                      "summary":  "Coordinates the branded sign-in and sign-out transition overlay, tracking transition phase, origin geometry, timers, and context actions.",
+                      "tags":  [
+                                   "component",
+                                   "authentication",
+                                   "motion",
+                                   "context",
+                                   "transition"
+                               ],
+                      "complexity":  "complex"
+                  },
+                  {
+                      "id":  "file:frontend/src/motion/primitives.jsx",
+                      "type":  "file",
+                      "name":  "primitives.jsx",
+                      "filePath":  "frontend/src/motion/primitives.jsx",
+                      "summary":  "Defines reusable Framer Motion wrappers for global motion preferences, staggered entrances, and responsive drawer detection.",
+                      "tags":  [
+                                   "component",
+                                   "motion",
+                                   "hook",
+                                   "accessibility"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "file:frontend/src/motion/tokens.js",
+                      "type":  "file",
+                      "name":  "tokens.js",
+                      "filePath":  "frontend/src/motion/tokens.js",
+                      "summary":  "Centralizes spring, easing, entrance, layout, and tactile-interaction presets shared by the interface motion system.",
+                      "tags":  [
+                                   "utility",
+                                   "motion",
+                                   "design-tokens",
+                                   "configuration"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "file:frontend/src/motion/visualTransitions.js",
+                      "type":  "file",
+                      "name":  "visualTransitions.js",
+                      "filePath":  "frontend/src/motion/visualTransitions.js",
+                      "summary":  "Wraps route or state updates with the browser View Transition API when available and schedules a single fallback when it is unsupported or fails.",
+                      "tags":  [
+                                   "utility",
+                                   "motion",
+                                   "transition",
+                                   "browser-api"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "file:frontend/src/serverHealth.jsx",
+                      "type":  "file",
+                      "name":  "serverHealth.jsx",
+                      "filePath":  "frontend/src/serverHealth.jsx",
+                      "summary":  "Provides the React health-monitoring hook and blocking recovery overlay, polling the server and translating health-core decisions into UI state.",
+                      "tags":  [
+                                   "service",
+                                   "hook",
+                                   "component",
+                                   "server-health",
+                                   "monitoring"
+                               ],
+                      "complexity":  "complex"
+                  },
+                  {
+                      "id":  "file:frontend/src/serverHealthCore.js",
+                      "type":  "file",
+                      "name":  "serverHealthCore.js",
+                      "filePath":  "frontend/src/serverHealthCore.js",
+                      "summary":  "Implements the framework-independent health request, failure classification, and restart/recovery decision logic used by the watchdog and its tests.",
+                      "tags":  [
+                                   "service",
+                                   "utility",
+                                   "server-health",
+                                   "monitoring",
+                                   "testing"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "file:frontend/src/workingToast.js",
+                      "type":  "file",
+                      "name":  "workingToast.js",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "summary":  "Manages shared working-toast events and request lifecycle state, including manual controls and automatic handling for eligible fetch requests.",
+                      "tags":  [
+                                   "service",
+                                   "event-handler",
+                                   "toast",
+                                   "fetch",
+                                   "state-management"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/App.jsx:triggerPageTransition",
+                      "type":  "function",
+                      "name":  "triggerPageTransition",
+                      "filePath":  "frontend/src/App.jsx",
+                      "lineRange":  [
+                                        33,
+                                        55
+                                    ],
+                      "summary":  "Starts and cleans up the dashboard surface CSS entrance animation, replacing any prior animation-end handler.",
+                      "tags":  [
+                                   "motion",
+                                   "animation",
+                                   "event-handler"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/App.jsx:triggerLoginRouteFallback",
+                      "type":  "function",
+                      "name":  "triggerLoginRouteFallback",
+                      "filePath":  "frontend/src/App.jsx",
+                      "lineRange":  [
+                                        64,
+                                        80
+                                    ],
+                      "summary":  "Applies the login route\u0027s CSS fallback entrance and removes its listener after the matching animation completes.",
+                      "tags":  [
+                                   "motion",
+                                   "routing",
+                                   "fallback"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/App.jsx:VisualTransitionFallback",
+                      "type":  "function",
+                      "name":  "VisualTransitionFallback",
+                      "filePath":  "frontend/src/App.jsx",
+                      "lineRange":  [
+                                        90,
+                                        175
+                                    ],
+                      "summary":  "Observes route and dashboard navigation changes, avoids locale-only animations, and triggers CSS fallbacks when native snapshots do not own the transition.",
+                      "tags":  [
+                                   "component",
+                                   "routing",
+                                   "motion",
+                                   "observer"
+                               ],
+                      "complexity":  "complex"
+                  },
+                  {
+                      "id":  "function:frontend/src/App.jsx:App",
+                      "type":  "function",
+                      "name":  "App",
+                      "filePath":  "frontend/src/App.jsx",
+                      "lineRange":  [
+                                        177,
+                                        197
+                                    ],
+                      "summary":  "Composes the router, shared transition and status layers, lazy dashboard route, and sign-in route under motion preferences.",
+                      "tags":  [
+                                   "entry-point",
+                                   "component",
+                                   "routing",
+                                   "layout"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/ERCVectorLogo.jsx:ERCVectorLogo",
+                      "type":  "function",
+                      "name":  "ERCVectorLogo",
+                      "filePath":  "frontend/src/ERCVectorLogo.jsx",
+                      "lineRange":  [
+                                        3,
+                                        17
+                                    ],
+                      "summary":  "Renders the crescent emblem as an SVG with configurable accessible labeling and decorative mode.",
+                      "tags":  [
+                                   "component",
+                                   "svg",
+                                   "branding"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/Login.jsx:OpsClock",
+                      "type":  "function",
+                      "name":  "OpsClock",
+                      "filePath":  "frontend/src/Login.jsx",
+                      "lineRange":  [
+                                        71,
+                                        83
+                                    ],
+                      "summary":  "Displays a locally updated clock while isolating its one-second refresh to the small clock component.",
+                      "tags":  [
+                                   "component",
+                                   "clock",
+                                   "timer"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/Login.jsx:useCountUp",
+                      "type":  "function",
+                      "name":  "useCountUp",
+                      "filePath":  "frontend/src/Login.jsx",
+                      "lineRange":  [
+                                        88,
+                                        106
+                                    ],
+                      "summary":  "Interpolates a target gauge value with requestAnimationFrame and returns the final value directly when reduced motion is preferred.",
+                      "tags":  [
+                                   "hook",
+                                   "animation",
+                                   "accessibility"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/Login.jsx:Gauge",
+                      "type":  "function",
+                      "name":  "Gauge",
+                      "filePath":  "frontend/src/Login.jsx",
+                      "lineRange":  [
+                                        109,
+                                        129
+                                    ],
+                      "summary":  "Renders a readiness percentage, animated fill bar, and label using the shared count-up behavior.",
+                      "tags":  [
+                                   "component",
+                                   "visualization",
+                                   "animation"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/Login.jsx:LampAssembly",
+                      "type":  "function",
+                      "name":  "LampAssembly",
+                      "filePath":  "frontend/src/Login.jsx",
+                      "lineRange":  [
+                                        192,
+                                        352
+                                    ],
+                      "summary":  "Implements the sign-in scene\u0027s interactive pull-cord lamp, including pointer parallax and spring-like cord return animation.",
+                      "tags":  [
+                                   "component",
+                                   "interaction",
+                                   "animation",
+                                   "pointer-events"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/Login.jsx:Login",
+                      "type":  "function",
+                      "name":  "Login",
+                      "filePath":  "frontend/src/Login.jsx",
+                      "lineRange":  [
+                                        354,
+                                        1410
+                                    ],
+                      "summary":  "Manages the sign-in form, authentication and verification stages, server-health display, language/theme state, and animated landing scene.",
+                      "tags":  [
+                                   "component",
+                                   "authentication",
+                                   "form",
+                                   "state-management",
+                                   "motion"
+                               ],
+                      "complexity":  "complex"
+                  },
+                  {
+                      "id":  "function:frontend/src/__tests__/motionAudit.test.js:installBrowserMock",
+                      "type":  "function",
+                      "name":  "installBrowserMock",
+                      "filePath":  "frontend/src/__tests__/motionAudit.test.js",
+                      "lineRange":  [
+                                        11,
+                                        65
+                                    ],
+                      "summary":  "Installs controlled document, window, and transition API mocks and returns helpers for resolving transitions and restoring global state.",
+                      "tags":  [
+                                   "test",
+                                   "mock",
+                                   "browser-api"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/components/CustomTooltipLayer.jsx:getPlacement",
+                      "type":  "function",
+                      "name":  "getPlacement",
+                      "filePath":  "frontend/src/components/CustomTooltipLayer.jsx",
+                      "lineRange":  [
+                                        19,
+                                        42
+                                    ],
+                      "summary":  "Calculates tooltip side and viewport-constrained coordinates from its trigger geometry and text direction.",
+                      "tags":  [
+                                   "utility",
+                                   "tooltip",
+                                   "positioning"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/components/CustomTooltipLayer.jsx:CustomTooltipLayer",
+                      "type":  "function",
+                      "name":  "CustomTooltipLayer",
+                      "filePath":  "frontend/src/components/CustomTooltipLayer.jsx",
+                      "lineRange":  [
+                                        44,
+                                        167
+                                    ],
+                      "summary":  "Tracks pointer and focus events, manages tooltip accessibility attributes, and portals the active tooltip into the document body.",
+                      "tags":  [
+                                   "component",
+                                   "tooltip",
+                                   "accessibility",
+                                   "event-handler"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/components/WorkingToast.jsx:WorkingToast",
+                      "type":  "function",
+                      "name":  "WorkingToast",
+                      "filePath":  "frontend/src/components/WorkingToast.jsx",
+                      "lineRange":  [
+                                        4,
+                                        30
+                                    ],
+                      "summary":  "Subscribes to shared working-state events and displays or clears the animated status pill accordingly.",
+                      "tags":  [
+                                   "component",
+                                   "toast",
+                                   "event-handler"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/AnimatedNumber.jsx:parseDisplay",
+                      "type":  "function",
+                      "name":  "parseDisplay",
+                      "filePath":  "frontend/src/motion/AnimatedNumber.jsx",
+                      "lineRange":  [
+                                        28,
+                                        44
+                                    ],
+                      "summary":  "Parses a display string into numeric value and formatting metadata, returning no animation metadata for unsupported text.",
+                      "tags":  [
+                                   "utility",
+                                   "parsing",
+                                   "formatting"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/AnimatedNumber.jsx:AnimatedNumber",
+                      "type":  "function",
+                      "name":  "AnimatedNumber",
+                      "filePath":  "frontend/src/motion/AnimatedNumber.jsx",
+                      "lineRange":  [
+                                        56,
+                                        81
+                                    ],
+                      "summary":  "Uses a spring-driven value to animate numeric text while preserving prefix, suffix, grouping, decimal precision, and reduced-motion behavior.",
+                      "tags":  [
+                                   "component",
+                                   "animation",
+                                   "formatting",
+                                   "accessibility"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/AuthEntryTransition.jsx:AuthEntryTransitionProvider",
+                      "type":  "function",
+                      "name":  "AuthEntryTransitionProvider",
+                      "filePath":  "frontend/src/motion/AuthEntryTransition.jsx",
+                      "lineRange":  [
+                                        13,
+                                        330
+                                    ],
+                      "summary":  "Owns the authentication transition context and coordinates source-logo measurement, route markers, timing, visual phases, and overlay rendering.",
+                      "tags":  [
+                                   "component",
+                                   "provider",
+                                   "authentication",
+                                   "motion",
+                                   "state-management"
+                               ],
+                      "complexity":  "complex"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/AuthEntryTransition.jsx:useAuthEntryTransition",
+                      "type":  "function",
+                      "name":  "useAuthEntryTransition",
+                      "filePath":  "frontend/src/motion/AuthEntryTransition.jsx",
+                      "lineRange":  [
+                                        332,
+                                        338
+                                    ],
+                      "summary":  "Returns the authentication-transition context and reports misuse outside its provider.",
+                      "tags":  [
+                                   "hook",
+                                   "context",
+                                   "authentication"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/primitives.jsx:MotionProvider",
+                      "type":  "function",
+                      "name":  "MotionProvider",
+                      "filePath":  "frontend/src/motion/primitives.jsx",
+                      "lineRange":  [
+                                        20,
+                                        26
+                                    ],
+                      "summary":  "Configures shared Framer Motion defaults and delegates reduced-motion handling to the user\u0027s system preference.",
+                      "tags":  [
+                                   "component",
+                                   "provider",
+                                   "motion",
+                                   "accessibility"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/primitives.jsx:StaggerGroup",
+                      "type":  "function",
+                      "name":  "StaggerGroup",
+                      "filePath":  "frontend/src/motion/primitives.jsx",
+                      "lineRange":  [
+                                        32,
+                                        55
+                                    ],
+                      "summary":  "Wraps children in a motion container that distributes their entrance timing with configurable stagger and delay settings.",
+                      "tags":  [
+                                   "component",
+                                   "motion",
+                                   "animation"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/primitives.jsx:StaggerItem",
+                      "type":  "function",
+                      "name":  "StaggerItem",
+                      "filePath":  "frontend/src/motion/primitives.jsx",
+                      "lineRange":  [
+                                        61,
+                                        67
+                                    ],
+                      "summary":  "Wraps an item in a motion element and supplies the selected entrance variants for parent stagger groups.",
+                      "tags":  [
+                                   "component",
+                                   "motion",
+                                   "animation"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/primitives.jsx:useIsMobileDrawer",
+                      "type":  "function",
+                      "name":  "useIsMobileDrawer",
+                      "filePath":  "frontend/src/motion/primitives.jsx",
+                      "lineRange":  [
+                                        76,
+                                        98
+                                    ],
+                      "summary":  "Tracks a media query with a React state hook and cleans up its change listener across modern and legacy browser APIs.",
+                      "tags":  [
+                                   "hook",
+                                   "responsive",
+                                   "media-query"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/tokens.js:staggerParent",
+                      "type":  "function",
+                      "name":  "staggerParent",
+                      "filePath":  "frontend/src/motion/tokens.js",
+                      "lineRange":  [
+                                        28,
+                                        31
+                                    ],
+                      "summary":  "Creates hidden/show variants that configure child staggering and entrance delay.",
+                      "tags":  [
+                                   "utility",
+                                   "motion",
+                                   "animation"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/visualTransitions.js:scheduleFallback",
+                      "type":  "function",
+                      "name":  "scheduleFallback",
+                      "filePath":  "frontend/src/motion/visualTransitions.js",
+                      "lineRange":  [
+                                        14,
+                                        30
+                                    ],
+                      "summary":  "Clears the matching transition marker and dispatches a fallback event on the next animation frame or microtask.",
+                      "tags":  [
+                                   "utility",
+                                   "motion",
+                                   "event-handler"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/motion/visualTransitions.js:runVisualTransition",
+                      "type":  "function",
+                      "name":  "runVisualTransition",
+                      "filePath":  "frontend/src/motion/visualTransitions.js",
+                      "lineRange":  [
+                                        37,
+                                        78
+                                    ],
+                      "summary":  "Runs an update once inside a native view transition when supported, otherwise runs it directly and schedules fallback behavior on transition failure.",
+                      "tags":  [
+                                   "utility",
+                                   "motion",
+                                   "browser-api",
+                                   "transition"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/serverHealth.jsx:useServerHealth",
+                      "type":  "function",
+                      "name":  "useServerHealth",
+                      "filePath":  "frontend/src/serverHealth.jsx",
+                      "lineRange":  [
+                                        39,
+                                        173
+                                    ],
+                      "summary":  "Polls server health, classifies failures and recoveries, updates watchdog state, and manages active-tab and network-triggered checks.",
+                      "tags":  [
+                                   "hook",
+                                   "server-health",
+                                   "polling",
+                                   "state-management"
+                               ],
+                      "complexity":  "complex"
+                  },
+                  {
+                      "id":  "function:frontend/src/serverHealth.jsx:ServerDownOverlay",
+                      "type":  "function",
+                      "name":  "ServerDownOverlay",
+                      "filePath":  "frontend/src/serverHealth.jsx",
+                      "lineRange":  [
+                                        218,
+                                        331
+                                    ],
+                      "summary":  "Renders the blocking outage or recovery interface from the watchdog\u0027s health and incident state.",
+                      "tags":  [
+                                   "component",
+                                   "server-health",
+                                   "recovery",
+                                   "overlay"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/serverHealthCore.js:healthUrl",
+                      "type":  "function",
+                      "name":  "healthUrl",
+                      "filePath":  "frontend/src/serverHealthCore.js",
+                      "lineRange":  [
+                                        27,
+                                        27
+                                    ],
+                      "summary":  "Builds the health endpoint URL with a timestamp query value to avoid stale cached responses.",
+                      "tags":  [
+                                   "utility",
+                                   "server-health",
+                                   "url"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/serverHealthCore.js:checkServerHealth",
+                      "type":  "function",
+                      "name":  "checkServerHealth",
+                      "filePath":  "frontend/src/serverHealthCore.js",
+                      "lineRange":  [
+                                        29,
+                                        62
+                                    ],
+                      "summary":  "Sends a bounded-time health request and normalizes reachability, database status, response data, latency, and errors.",
+                      "tags":  [
+                                   "service",
+                                   "server-health",
+                                   "fetch",
+                                   "timeout"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/serverHealthCore.js:classifyHealth",
+                      "type":  "function",
+                      "name":  "classifyHealth",
+                      "filePath":  "frontend/src/serverHealthCore.js",
+                      "lineRange":  [
+                                        70,
+                                        77
+                                    ],
+                      "summary":  "Classifies a health result, increments or clears the failure count, selects the failure reason, and determines whether the UI should block.",
+                      "tags":  [
+                                   "utility",
+                                   "server-health",
+                                   "classification"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/serverHealthCore.js:resolveRecovery",
+                      "type":  "function",
+                      "name":  "resolveRecovery",
+                      "filePath":  "frontend/src/serverHealthCore.js",
+                      "lineRange":  [
+                                        83,
+                                        108
+                                    ],
+                      "summary":  "Compares prior and current server identity metadata to identify restart versus recovery and create an expiring incident record.",
+                      "tags":  [
+                                   "utility",
+                                   "server-health",
+                                   "recovery"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:setWorkingHardCap",
+                      "type":  "function",
+                      "name":  "setWorkingHardCap",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        59,
+                                        59
+                                    ],
+                      "summary":  "Sets a non-negative override for the working-session safety timeout, primarily for tests.",
+                      "tags":  [
+                                   "utility",
+                                   "testing",
+                                   "timeout"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:setWorkingSuppressed",
+                      "type":  "function",
+                      "name":  "setWorkingSuppressed",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        62,
+                                        70
+                                    ],
+                      "summary":  "Enables or disables toast suppression and clears an active toast session when suppression is turned on.",
+                      "tags":  [
+                                   "utility",
+                                   "toast",
+                                   "state-management"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:showWorking",
+                      "type":  "function",
+                      "name":  "showWorking",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        72,
+                                        85
+                                    ],
+                      "summary":  "Starts or increments a working session, broadcasts its display text, and resets the hard-cap safety timer.",
+                      "tags":  [
+                                   "utility",
+                                   "toast",
+                                   "event-handler",
+                                   "timeout"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:hideWorking",
+                      "type":  "function",
+                      "name":  "hideWorking",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        87,
+                                        97
+                                    ],
+                      "summary":  "Decrements the active-session count and emits a hide event when no working operations remain.",
+                      "tags":  [
+                                   "utility",
+                                   "toast",
+                                   "event-handler"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:resetWorking",
+                      "type":  "function",
+                      "name":  "resetWorking",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        99,
+                                        105
+                                    ],
+                      "summary":  "Clears all working-session state and timers, then broadcasts a hide event.",
+                      "tags":  [
+                                   "utility",
+                                   "toast",
+                                   "state-management"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:withWorking",
+                      "type":  "function",
+                      "name":  "withWorking",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        107,
+                                        112
+                                    ],
+                      "summary":  "Wraps a promise or promise-producing function in a working session and hides the toast when it settles.",
+                      "tags":  [
+                                   "utility",
+                                   "toast",
+                                   "promise"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:autoShow",
+                      "type":  "function",
+                      "name":  "autoShow",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        122,
+                                        139
+                                    ],
+                      "summary":  "Starts automatic toast state for eligible requests while preserving an existing manually supplied working message.",
+                      "tags":  [
+                                   "utility",
+                                   "toast",
+                                   "fetch",
+                                   "state-management"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:autoSettle",
+                      "type":  "function",
+                      "name":  "autoSettle",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        141,
+                                        152
+                                    ],
+                      "summary":  "Schedules automatic toast dismissal after in-flight requests settle, honoring minimum display and grace periods.",
+                      "tags":  [
+                                   "utility",
+                                   "toast",
+                                   "fetch",
+                                   "timeout"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:installWorkingAuto",
+                      "type":  "function",
+                      "name":  "installWorkingAuto",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        154,
+                                        190
+                                    ],
+                      "summary":  "Installs a guarded fetch wrapper that tracks eligible non-read requests and settles shared working status without altering request results.",
+                      "tags":  [
+                                   "service",
+                                   "fetch",
+                                   "event-handler",
+                                   "toast",
+                                   "integration"
+                               ],
+                      "complexity":  "moderate"
+                  },
+                  {
+                      "id":  "function:frontend/src/workingToast.js:getWorkingText",
+                      "type":  "function",
+                      "name":  "getWorkingText",
+                      "filePath":  "frontend/src/workingToast.js",
+                      "lineRange":  [
+                                        193,
+                                        193
+                                    ],
+                      "summary":  "Returns the currently stored working-status text.",
+                      "tags":  [
+                                   "utility",
+                                   "toast",
+                                   "state"
+                               ],
+                      "complexity":  "simple"
+                  }
+              ],
+    "edges":  [
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "function:frontend/src/App.jsx:triggerPageTransition",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "function:frontend/src/App.jsx:triggerLoginRouteFallback",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "function:frontend/src/App.jsx:VisualTransitionFallback",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "function:frontend/src/App.jsx:App",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "function:frontend/src/App.jsx:App",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/ERCVectorLogo.jsx",
+                      "target":  "function:frontend/src/ERCVectorLogo.jsx:ERCVectorLogo",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/ERCVectorLogo.jsx",
+                      "target":  "function:frontend/src/ERCVectorLogo.jsx:ERCVectorLogo",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "function:frontend/src/Login.jsx:OpsClock",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "function:frontend/src/Login.jsx:useCountUp",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "function:frontend/src/Login.jsx:Gauge",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "function:frontend/src/Login.jsx:LampAssembly",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "function:frontend/src/Login.jsx:Login",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "function:frontend/src/Login.jsx:Login",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/__tests__/motionAudit.test.js",
+                      "target":  "function:frontend/src/__tests__/motionAudit.test.js:installBrowserMock",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/components/CustomTooltipLayer.jsx",
+                      "target":  "function:frontend/src/components/CustomTooltipLayer.jsx:getPlacement",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/components/CustomTooltipLayer.jsx",
+                      "target":  "function:frontend/src/components/CustomTooltipLayer.jsx:CustomTooltipLayer",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/components/CustomTooltipLayer.jsx",
+                      "target":  "function:frontend/src/components/CustomTooltipLayer.jsx:CustomTooltipLayer",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/components/WorkingToast.jsx",
+                      "target":  "function:frontend/src/components/WorkingToast.jsx:WorkingToast",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/components/WorkingToast.jsx",
+                      "target":  "function:frontend/src/components/WorkingToast.jsx:WorkingToast",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AnimatedNumber.jsx",
+                      "target":  "function:frontend/src/motion/AnimatedNumber.jsx:parseDisplay",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AnimatedNumber.jsx",
+                      "target":  "function:frontend/src/motion/AnimatedNumber.jsx:AnimatedNumber",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AnimatedNumber.jsx",
+                      "target":  "function:frontend/src/motion/AnimatedNumber.jsx:AnimatedNumber",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "target":  "function:frontend/src/motion/AuthEntryTransition.jsx:AuthEntryTransitionProvider",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "target":  "function:frontend/src/motion/AuthEntryTransition.jsx:AuthEntryTransitionProvider",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "target":  "function:frontend/src/motion/AuthEntryTransition.jsx:useAuthEntryTransition",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "target":  "function:frontend/src/motion/AuthEntryTransition.jsx:useAuthEntryTransition",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "function:frontend/src/motion/primitives.jsx:MotionProvider",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "function:frontend/src/motion/primitives.jsx:MotionProvider",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "function:frontend/src/motion/primitives.jsx:StaggerGroup",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "function:frontend/src/motion/primitives.jsx:StaggerGroup",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "function:frontend/src/motion/primitives.jsx:StaggerItem",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "function:frontend/src/motion/primitives.jsx:StaggerItem",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "function:frontend/src/motion/primitives.jsx:useIsMobileDrawer",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "function:frontend/src/motion/primitives.jsx:useIsMobileDrawer",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/tokens.js",
+                      "target":  "function:frontend/src/motion/tokens.js:staggerParent",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/tokens.js",
+                      "target":  "function:frontend/src/motion/tokens.js:staggerParent",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/visualTransitions.js",
+                      "target":  "function:frontend/src/motion/visualTransitions.js:scheduleFallback",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/visualTransitions.js",
+                      "target":  "function:frontend/src/motion/visualTransitions.js:runVisualTransition",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/visualTransitions.js",
+                      "target":  "function:frontend/src/motion/visualTransitions.js:runVisualTransition",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealth.jsx",
+                      "target":  "function:frontend/src/serverHealth.jsx:useServerHealth",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealth.jsx",
+                      "target":  "function:frontend/src/serverHealth.jsx:useServerHealth",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealth.jsx",
+                      "target":  "function:frontend/src/serverHealth.jsx:ServerDownOverlay",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealth.jsx",
+                      "target":  "function:frontend/src/serverHealth.jsx:ServerDownOverlay",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "function:frontend/src/serverHealthCore.js:healthUrl",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "function:frontend/src/serverHealthCore.js:healthUrl",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "function:frontend/src/serverHealthCore.js:checkServerHealth",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "function:frontend/src/serverHealthCore.js:checkServerHealth",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "function:frontend/src/serverHealthCore.js:classifyHealth",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "function:frontend/src/serverHealthCore.js:classifyHealth",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "function:frontend/src/serverHealthCore.js:resolveRecovery",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "function:frontend/src/serverHealthCore.js:resolveRecovery",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:setWorkingHardCap",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:setWorkingHardCap",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:setWorkingSuppressed",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:setWorkingSuppressed",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:showWorking",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:showWorking",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:hideWorking",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:hideWorking",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:resetWorking",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:resetWorking",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:withWorking",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:withWorking",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:autoShow",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:autoSettle",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:installWorkingAuto",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:installWorkingAuto",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:getWorkingText",
+                      "type":  "contains",
+                      "direction":  "forward",
+                      "weight":  1
+                  },
+                  {
+                      "source":  "file:frontend/src/workingToast.js",
+                      "target":  "function:frontend/src/workingToast.js:getWorkingText",
+                      "type":  "exports",
+                      "direction":  "forward",
+                      "weight":  0.8
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "file:frontend/src/Login.jsx",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "file:frontend/src/components/CustomTooltipLayer.jsx",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "file:frontend/src/components/WorkingToast.jsx",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "file:frontend/src/motion/premiumPageTransitions.css",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "file:frontend/src/motion/visualTransitions.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "file:frontend/src/workingToast.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "file:frontend/src/ERCVectorLogo.jsx",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "file:frontend/src/apiBase.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "file:frontend/src/login/loginScene.css",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "file:frontend/src/motion/tokens.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "file:frontend/src/serverHealth.jsx",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "file:frontend/src/serverHealthCore.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/Login.jsx",
+                      "target":  "file:frontend/src/workingToast.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/__tests__/motionAudit.test.js",
+                      "target":  "file:frontend/src/motion/visualTransitions.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/__tests__/serverHealthCore.test.js",
+                      "target":  "file:frontend/src/serverHealthCore.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/components/WorkingToast.jsx",
+                      "target":  "file:frontend/src/workingToast.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AnimatedNumber.jsx",
+                      "target":  "file:frontend/src/motion/tokens.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "target":  "file:frontend/src/ERCVectorLogo.jsx",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "target":  "file:frontend/src/motion/authEntryTransition.css",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/primitives.jsx",
+                      "target":  "file:frontend/src/motion/tokens.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealth.jsx",
+                      "target":  "file:frontend/src/serverHealthCore.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "file:frontend/src/apiBase.js",
+                      "type":  "imports",
+                      "direction":  "forward",
+                      "weight":  0.7
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/visualTransitions.js",
+                      "target":  "file:frontend/src/__tests__/motionAudit.test.js",
+                      "type":  "tested_by",
+                      "direction":  "forward",
+                      "weight":  0.5
+                  },
+                  {
+                      "source":  "file:frontend/src/App.jsx",
+                      "target":  "file:frontend/src/__tests__/motionAudit.test.js",
+                      "type":  "tested_by",
+                      "direction":  "forward",
+                      "weight":  0.5
+                  },
+                  {
+                      "source":  "file:frontend/src/motion/AuthEntryTransition.jsx",
+                      "target":  "file:frontend/src/__tests__/motionAudit.test.js",
+                      "type":  "tested_by",
+                      "direction":  "forward",
+                      "weight":  0.5
+                  },
+                  {
+                      "source":  "file:frontend/src/serverHealthCore.js",
+                      "target":  "file:frontend/src/__tests__/serverHealthCore.test.js",
+                      "type":  "tested_by",
+                      "direction":  "forward",
+                      "weight":  0.5
+                  }
+              ]
+}

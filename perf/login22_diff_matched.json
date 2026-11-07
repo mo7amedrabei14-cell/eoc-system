@@ -1,0 +1,13 @@
+{
+  "width": 1440,
+  "height": 1000,
+  "totalPixels": 1440000,
+  "changedPixels": 76,
+  "changedPercent": 0.005277777777777778,
+  "maxChannelDelta": 8,
+  "meanChannelDelta": 0.00009409722222222222,
+  "pageErrors": {
+    "before": [],
+    "after": []
+  }
+}

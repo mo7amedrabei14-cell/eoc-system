@@ -1,0 +1,248 @@
+{
+  "criterion": 22,
+  "status": "accepted",
+  "method": {
+    "lighthouse": "5 alternating runs per version; mobile simulated throttling; external API origin blocked for both",
+    "harsh": "3 alternating runs per version; 400ms latency; 51200 B/s download; 25600 B/s upload; 6x CPU; non-target origins blocked; wait for visible .lx-lamp-cord plus network idle",
+    "visual": "1440x1000; reduced motion; lamp activated; visible form; external origins blocked"
+  },
+  "lighthouse": {
+    "before": {
+      "lcpMs": 8112.6204,
+      "tbtMs": 1685,
+      "cls": 0,
+      "ttfbMs": 7,
+      "requests": 15,
+      "completedRequests": 13,
+      "scriptTransferBytes": 770626,
+      "totalTransferBytes": 1143949
+    },
+    "after": {
+      "lcpMs": 4322.1535,
+      "tbtMs": 2034.05105,
+      "cls": 0,
+      "ttfbMs": 6,
+      "requests": 15,
+      "completedRequests": 13,
+      "scriptTransferBytes": 149727,
+      "totalTransferBytes": 517195
+    },
+    "changePercent": {
+      "lcpMs": -46.72308961972385,
+      "tbtMs": 20.71519584569733,
+      "cls": null,
+      "ttfbMs": -14.285714285714285,
+      "requests": 0,
+      "completedRequests": 0,
+      "scriptTransferBytes": -80.57073080845961,
+      "totalTransferBytes": -54.788631311360916
+    }
+  },
+  "harsh": {
+    "before": {
+      "loadMs": 30306,
+      "lcpMs": 0,
+      "requests": 12,
+      "transferKB": 828
+    },
+    "after": {
+      "loadMs": 16753,
+      "lcpMs": 0,
+      "requests": 12,
+      "transferKB": 216
+    },
+    "changePercent": {
+      "loadMs": -44.72051738929585,
+      "lcpMs": null,
+      "requests": 0,
+      "transferKB": -73.91304347826086
+    }
+  },
+  "visual": {
+    "width": 1440,
+    "height": 1000,
+    "totalPixels": 1440000,
+    "changedPixels": 76,
+    "changedPercent": 0.005277777777777778,
+    "maxChannelDelta": 8,
+    "meanChannelDelta": 0.00009409722222222222,
+    "pageErrors": {
+      "before": [],
+      "after": []
+    }
+  },
+  "tests": {
+    "total": 160,
+    "passed": 158,
+    "failed": 2,
+    "unchangedBaselineFailures": true
+  },
+  "details": {
+    "lighthouseBefore": [
+      {
+        "run": 1,
+        "lcpMs": 8116.4502,
+        "tbtMs": 1685,
+        "cls": 0,
+        "ttfbMs": 8,
+        "requests": 15,
+        "completedRequests": 13,
+        "scriptTransferBytes": 770626,
+        "totalTransferBytes": 1143949
+      },
+      {
+        "run": 2,
+        "lcpMs": 8112.6204,
+        "tbtMs": 2266,
+        "cls": 0,
+        "ttfbMs": 6,
+        "requests": 14,
+        "completedRequests": 13,
+        "scriptTransferBytes": 770626,
+        "totalTransferBytes": 1143949
+      },
+      {
+        "run": 3,
+        "lcpMs": 8129.042600000001,
+        "tbtMs": 2160.5,
+        "cls": 0,
+        "ttfbMs": 6,
+        "requests": 14,
+        "completedRequests": 13,
+        "scriptTransferBytes": 770626,
+        "totalTransferBytes": 1143949
+      },
+      {
+        "run": 4,
+        "lcpMs": 7876.5802,
+        "tbtMs": 1330.5,
+        "cls": 0,
+        "ttfbMs": 10,
+        "requests": 15,
+        "completedRequests": 13,
+        "scriptTransferBytes": 770626,
+        "totalTransferBytes": 1143949
+      },
+      {
+        "run": 5,
+        "lcpMs": 7943.3345,
+        "tbtMs": 1366.277,
+        "cls": 0,
+        "ttfbMs": 7,
+        "requests": 15,
+        "completedRequests": 13,
+        "scriptTransferBytes": 770626,
+        "totalTransferBytes": 1143949
+      }
+    ],
+    "lighthouseAfter": [
+      {
+        "run": 1,
+        "lcpMs": 4252.9122,
+        "tbtMs": 957,
+        "cls": 0,
+        "ttfbMs": 7,
+        "requests": 14,
+        "completedRequests": 13,
+        "scriptTransferBytes": 149727,
+        "totalTransferBytes": 517195
+      },
+      {
+        "run": 2,
+        "lcpMs": 4322.1535,
+        "tbtMs": 2708.4232499999994,
+        "cls": 0,
+        "ttfbMs": 7,
+        "requests": 15,
+        "completedRequests": 13,
+        "scriptTransferBytes": 149727,
+        "totalTransferBytes": 517195
+      },
+      {
+        "run": 3,
+        "lcpMs": 4259.790599999999,
+        "tbtMs": 1334,
+        "cls": 0,
+        "ttfbMs": 5,
+        "requests": 14,
+        "completedRequests": 13,
+        "scriptTransferBytes": 149727,
+        "totalTransferBytes": 517195
+      },
+      {
+        "run": 4,
+        "lcpMs": 4327.973400000001,
+        "tbtMs": 2751.4999999999995,
+        "cls": 0,
+        "ttfbMs": 6,
+        "requests": 15,
+        "completedRequests": 13,
+        "scriptTransferBytes": 149727,
+        "totalTransferBytes": 517195
+      },
+      {
+        "run": 5,
+        "lcpMs": 4541.8979,
+        "tbtMs": 2034.05105,
+        "cls": 0,
+        "ttfbMs": 5,
+        "requests": 15,
+        "completedRequests": 13,
+        "scriptTransferBytes": 149727,
+        "totalTransferBytes": 517195
+      }
+    ],
+    "harshBefore": [
+      {
+        "run": 1,
+        "url": "http://localhost:4174/",
+        "loadMs": 30306,
+        "lcp": 0,
+        "requests": 12,
+        "transferKB": 828
+      },
+      {
+        "run": 2,
+        "url": "http://localhost:4174/",
+        "loadMs": 28107,
+        "lcp": 0,
+        "requests": 12,
+        "transferKB": 828
+      },
+      {
+        "run": 3,
+        "url": "http://localhost:4174/",
+        "loadMs": 30483,
+        "lcp": 0,
+        "requests": 12,
+        "transferKB": 828
+      }
+    ],
+    "harshAfter": [
+      {
+        "run": 1,
+        "url": "http://localhost:4173/",
+        "loadMs": 16753,
+        "lcp": 0,
+        "requests": 12,
+        "transferKB": 216
+      },
+      {
+        "run": 2,
+        "url": "http://localhost:4173/",
+        "loadMs": 18319,
+        "lcp": 0,
+        "requests": 12,
+        "transferKB": 216
+      },
+      {
+        "run": 3,
+        "url": "http://localhost:4173/",
+        "loadMs": 14836,
+        "lcp": 0,
+        "requests": 12,
+        "transferKB": 216
+      }
+    ]
+  }
+}

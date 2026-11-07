@@ -1,0 +1,335 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/__tests__/weatherIntelFilters.test.js",
+      "type": "file",
+      "name": "weatherIntelFilters.test.js",
+      "filePath": "frontend/src/__tests__/weatherIntelFilters.test.js",
+      "summary": "Node test suite for weather metric classification, phenomenon filters, and preservation of useful snapshots.",
+      "tags": [
+        "test",
+        "unit-test",
+        "weather",
+        "filtering"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/__tests__/weatherIntelFilters.test.js:makeAssessment",
+      "type": "function",
+      "name": "makeAssessment",
+      "filePath": "frontend/src/__tests__/weatherIntelFilters.test.js",
+      "lineRange": [
+        13,
+        23
+      ],
+      "summary": "Implements the make assessment helper used by weatherIntelFilters.test for frontend data handling.",
+      "tags": [
+        "test-helper",
+        "frontend",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/__tests__/weatherIntelFilters.test.js:setMetricValue",
+      "type": "function",
+      "name": "setMetricValue",
+      "filePath": "frontend/src/__tests__/weatherIntelFilters.test.js",
+      "lineRange": [
+        35,
+        60
+      ],
+      "summary": "Implements the set metric value helper used by weatherIntelFilters.test for frontend data handling.",
+      "tags": [
+        "test-helper",
+        "frontend",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/__tests__/wirelessDateFilter.test.js",
+      "type": "file",
+      "name": "wirelessDateFilter.test.js",
+      "filePath": "frontend/src/__tests__/wirelessDateFilter.test.js",
+      "summary": "Node test suite for date-aware visibility and status of wireless handover records.",
+      "tags": [
+        "test",
+        "unit-test",
+        "wireless",
+        "date-filter"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/__tests__/wirelessPrintTitle.test.js",
+      "type": "file",
+      "name": "wirelessPrintTitle.test.js",
+      "filePath": "frontend/src/__tests__/wirelessPrintTitle.test.js",
+      "summary": "Node test suite for readable and filesystem-safe print document titles in the wireless handover flow.",
+      "tags": [
+        "test",
+        "unit-test",
+        "wireless",
+        "printing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/__tests__/wirelessRecipientLookup.test.js",
+      "type": "file",
+      "name": "wirelessRecipientLookup.test.js",
+      "filePath": "frontend/src/__tests__/wirelessRecipientLookup.test.js",
+      "summary": "Node test suite for normalized wireless-recipient lookup behavior.",
+      "tags": [
+        "test",
+        "unit-test",
+        "wireless",
+        "lookup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/activityMap.js",
+      "type": "file",
+      "name": "activityMap.js",
+      "filePath": "frontend/src/activityMap.js",
+      "summary": "Generated catalog of activity-description keys and taxonomy labels, with helpers for normalizing and classifying activity text.",
+      "tags": [
+        "generated-data",
+        "classification",
+        "activity-catalog",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/activityMap.js:keyFrom",
+      "type": "function",
+      "name": "keyFrom",
+      "filePath": "frontend/src/activityMap.js",
+      "lineRange": [
+        4984,
+        4996
+      ],
+      "summary": "Normalizes activity text into a lookup key for the generated catalog.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/activityMap.js:classifyActivity",
+      "type": "function",
+      "name": "classifyActivity",
+      "filePath": "frontend/src/activityMap.js",
+      "lineRange": [
+        5007,
+        5016
+      ],
+      "summary": "Matches activity text against the generated catalog and returns its classification.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/apiBase.js",
+      "type": "file",
+      "name": "apiBase.js",
+      "filePath": "frontend/src/apiBase.js",
+      "summary": "Single source for the frontend API base address, selected from the Vite environment with a production fallback.",
+      "tags": [
+        "configuration",
+        "api",
+        "environment",
+        "frontend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/components/EocSelect.jsx",
+      "type": "file",
+      "name": "EocSelect.jsx",
+      "filePath": "frontend/src/components/EocSelect.jsx",
+      "summary": "Custom searchable select control that preserves a native select for form compatibility while rendering a positioned, keyboard-friendly menu.",
+      "tags": [
+        "component",
+        "form-control",
+        "select",
+        "accessibility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/components/EocSelect.jsx:EocSelect",
+      "type": "function",
+      "name": "EocSelect",
+      "filePath": "frontend/src/components/EocSelect.jsx",
+      "lineRange": [
+        19,
+        350
+      ],
+      "summary": "Renders the searchable select control while keeping its native form value synchronized.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/components/OwnerMessages.jsx",
+      "type": "file",
+      "name": "OwnerMessages.jsx",
+      "filePath": "frontend/src/components/OwnerMessages.jsx",
+      "summary": "Owner messaging interface that loads pending messages, supports acknowledgements, and provides a recipient composer backed by API requests.",
+      "tags": [
+        "component",
+        "messaging",
+        "api",
+        "owner-tools"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/components/OwnerMessages.jsx:apiRequest",
+      "type": "function",
+      "name": "apiRequest",
+      "filePath": "frontend/src/components/OwnerMessages.jsx",
+      "lineRange": [
+        13,
+        47
+      ],
+      "summary": "Performs an authenticated owner-message API request with timeout and error handling.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/components/OwnerMessages.jsx:OwnerMessages",
+      "type": "function",
+      "name": "OwnerMessages",
+      "filePath": "frontend/src/components/OwnerMessages.jsx",
+      "lineRange": [
+        53,
+        280
+      ],
+      "summary": "Renders pending owner messages and the owner-only message composition workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/__tests__/weatherIntelFilters.test.js",
+      "target": "function:frontend/src/__tests__/weatherIntelFilters.test.js:makeAssessment",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/__tests__/weatherIntelFilters.test.js",
+      "target": "function:frontend/src/__tests__/weatherIntelFilters.test.js:setMetricValue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/activityMap.js",
+      "target": "function:frontend/src/activityMap.js:keyFrom",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/activityMap.js",
+      "target": "function:frontend/src/activityMap.js:classifyActivity",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/activityMap.js",
+      "target": "function:frontend/src/activityMap.js:classifyActivity",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/EocSelect.jsx",
+      "target": "function:frontend/src/components/EocSelect.jsx:EocSelect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/OwnerMessages.jsx",
+      "target": "function:frontend/src/components/OwnerMessages.jsx:apiRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/OwnerMessages.jsx",
+      "target": "function:frontend/src/components/OwnerMessages.jsx:OwnerMessages",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/OwnerMessages.jsx",
+      "target": "function:frontend/src/components/OwnerMessages.jsx:OwnerMessages",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/__tests__/weatherIntelFilters.test.js",
+      "target": "file:frontend/src/weatherIntelFilters.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/wirelessDateFilter.test.js",
+      "target": "file:frontend/src/wirelessDateFilter.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/wirelessPrintTitle.test.js",
+      "target": "file:frontend/src/wirelessPrintTitle.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/wirelessRecipientLookup.test.js",
+      "target": "file:frontend/src/wirelessRecipientLookup.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/OwnerMessages.jsx",
+      "target": "file:frontend/src/apiBase.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

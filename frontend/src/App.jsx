@@ -1,13 +1,15 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import Login from './Login';
-import Dashboard, { WorkingToast } from './Dashboard';
+import WorkingToast from './components/WorkingToast';
 import { installWorkingAuto } from './workingToast';
 import CustomTooltipLayer from './components/CustomTooltipLayer';
 import './motion/premiumPageTransitions.css';
 import { AuthEntryTransitionProvider } from './motion/AuthEntryTransition';
 import { ENABLE_VISUAL_TRANSITIONS } from './motion/visualTransitions';
+
+const Dashboard = lazy(() => import('./Dashboard'));
 
 // ⛑️ حبة العمل العامة — مركّبة على مستوى التطبيق كله (تشمل شاشة الدخول وأي صفحة)
 installWorkingAuto();
@@ -180,12 +182,14 @@ function App() {
           <WorkingToast />
           <CustomTooltipLayer />
           <VisualTransitionFallback />
-          <Routes>
-            {/* Keep the original routes and React lifecycle; no keyed route wrappers. */}
-            <Route path="/" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
+          <Suspense fallback={<div className="skeleton min-h-screen" role="status" aria-label="Loading dashboard" />}>
+            <Routes>
+              {/* Keep the original routes and React lifecycle; no keyed route wrappers. */}
+              <Route path="/" element={<Login />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Suspense>
         </AuthEntryTransitionProvider>
       </MotionConfig>
     </BrowserRouter>

@@ -1,0 +1,400 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/wirelessDateFilter.js",
+      "type": "file",
+      "name": "wirelessDateFilter.js",
+      "filePath": "frontend/src/wirelessDateFilter.js",
+      "summary": "Date-aware wireless-delivery helpers for visibility, historical status, and return-date handling.",
+      "tags": [
+        "utility",
+        "wireless",
+        "date-filter",
+        "handover"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryDateMatchesFilter",
+      "type": "function",
+      "name": "wirelessDeliveryDateMatchesFilter",
+      "filePath": "frontend/src/wirelessDateFilter.js",
+      "lineRange": [
+        3,
+        23
+      ],
+      "summary": "Determines whether a delivery belongs in the selected historical date view.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryStatusAtFilterDate",
+      "type": "function",
+      "name": "wirelessDeliveryStatusAtFilterDate",
+      "filePath": "frontend/src/wirelessDateFilter.js",
+      "lineRange": [
+        25,
+        35
+      ],
+      "summary": "Derives the delivery status that applied on the selected date.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryReturnDate",
+      "type": "function",
+      "name": "wirelessDeliveryReturnDate",
+      "filePath": "frontend/src/wirelessDateFilter.js",
+      "lineRange": [
+        37,
+        40
+      ],
+      "summary": "Returns a validated return date for a wireless delivery.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/wirelessPrintTitle.js",
+      "type": "file",
+      "name": "wirelessPrintTitle.js",
+      "filePath": "frontend/src/wirelessPrintTitle.js",
+      "summary": "Builds a concise, filesystem-safe document title for printing wireless handover records.",
+      "tags": [
+        "utility",
+        "wireless",
+        "printing",
+        "document-title"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/wirelessPrintTitle.js:buildWirelessPrintTitle",
+      "type": "function",
+      "name": "buildWirelessPrintTitle",
+      "filePath": "frontend/src/wirelessPrintTitle.js",
+      "lineRange": [
+        3,
+        34
+      ],
+      "summary": "Builds a concise, sanitized print title from wireless handover metadata.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/wirelessRecipientLookup.js",
+      "type": "file",
+      "name": "wirelessRecipientLookup.js",
+      "filePath": "frontend/src/wirelessRecipientLookup.js",
+      "summary": "Normalizes lookup input and matches it against available wireless-recipient entries.",
+      "tags": [
+        "utility",
+        "wireless",
+        "lookup",
+        "normalization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/wirelessRecipientLookup.js:normalizeWirelessNationalId",
+      "type": "function",
+      "name": "normalizeWirelessNationalId",
+      "filePath": "frontend/src/wirelessRecipientLookup.js",
+      "lineRange": [
+        2,
+        8
+      ],
+      "summary": "Normalizes lookup input for wireless-recipient matching without embedding record values.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/wirelessRecipientLookup.js:findWirelessRecipient",
+      "type": "function",
+      "name": "findWirelessRecipient",
+      "filePath": "frontend/src/wirelessRecipientLookup.js",
+      "lineRange": [
+        10,
+        14
+      ],
+      "summary": "Finds a matching wireless-recipient entry from normalized lookup input.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/workspace.js",
+      "type": "file",
+      "name": "workspace.js",
+      "filePath": "frontend/src/workspace.js",
+      "summary": "Client helpers for fetching, saving, and deleting the signed-in user?s shared workspace state with graceful offline failure handling.",
+      "tags": [
+        "utility",
+        "api",
+        "persistence",
+        "synchronization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/workspace.js:authToken",
+      "type": "function",
+      "name": "authToken",
+      "filePath": "frontend/src/workspace.js",
+      "lineRange": [
+        19,
+        22
+      ],
+      "summary": "Reads the current session credential when a workspace request is made.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/workspace.js:fetchWorkspace",
+      "type": "function",
+      "name": "fetchWorkspace",
+      "filePath": "frontend/src/workspace.js",
+      "lineRange": [
+        27,
+        36
+      ],
+      "summary": "Fetches the current user?s shared workspace items with an offline-safe fallback.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/workspace.js:saveWorkspace",
+      "type": "function",
+      "name": "saveWorkspace",
+      "filePath": "frontend/src/workspace.js",
+      "lineRange": [
+        39,
+        51
+      ],
+      "summary": "Saves or updates a scoped item in the current user?s shared workspace.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/workspace.js:deleteWorkspace",
+      "type": "function",
+      "name": "deleteWorkspace",
+      "filePath": "frontend/src/workspace.js",
+      "lineRange": [
+        54,
+        65
+      ],
+      "summary": "Deletes a scoped item from the current user?s shared workspace.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:verify_12h.mjs",
+      "type": "file",
+      "name": "verify_12h.mjs",
+      "filePath": "verify_12h.mjs",
+      "summary": "Standalone Node verification script for the shared time utilities and their 12-hour display conversions.",
+      "tags": [
+        "verification",
+        "date-time",
+        "formatting",
+        "script"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/wirelessDateFilter.js",
+      "target": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryDateMatchesFilter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/wirelessDateFilter.js",
+      "target": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryStatusAtFilterDate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/wirelessDateFilter.js",
+      "target": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryReturnDate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/wirelessDateFilter.js",
+      "target": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryDateMatchesFilter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/wirelessDateFilter.js",
+      "target": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryStatusAtFilterDate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/wirelessDateFilter.js",
+      "target": "function:frontend/src/wirelessDateFilter.js:wirelessDeliveryReturnDate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/wirelessPrintTitle.js",
+      "target": "function:frontend/src/wirelessPrintTitle.js:buildWirelessPrintTitle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/wirelessPrintTitle.js",
+      "target": "function:frontend/src/wirelessPrintTitle.js:buildWirelessPrintTitle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/wirelessRecipientLookup.js",
+      "target": "function:frontend/src/wirelessRecipientLookup.js:normalizeWirelessNationalId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/wirelessRecipientLookup.js",
+      "target": "function:frontend/src/wirelessRecipientLookup.js:findWirelessRecipient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/wirelessRecipientLookup.js",
+      "target": "function:frontend/src/wirelessRecipientLookup.js:normalizeWirelessNationalId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/wirelessRecipientLookup.js",
+      "target": "function:frontend/src/wirelessRecipientLookup.js:findWirelessRecipient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "function:frontend/src/workspace.js:authToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "function:frontend/src/workspace.js:fetchWorkspace",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "function:frontend/src/workspace.js:saveWorkspace",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "function:frontend/src/workspace.js:deleteWorkspace",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "function:frontend/src/workspace.js:authToken",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "function:frontend/src/workspace.js:fetchWorkspace",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "function:frontend/src/workspace.js:saveWorkspace",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "function:frontend/src/workspace.js:deleteWorkspace",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/workspace.js",
+      "target": "file:frontend/src/apiBase.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:verify_12h.mjs",
+      "target": "file:frontend/src/timeutils.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

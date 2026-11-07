@@ -1,0 +1,79 @@
+{
+  "nodes": [
+    {
+      "id": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_handovers",
+      "type": "table",
+      "name": "wireless_handovers",
+      "filePath": "migrations/migrations/20261017_wireless_handover.sql",
+      "summary": "Defines the original single-device wireless handover record structure, including status and return tracking, with supporting indexes.",
+      "tags": ["database", "migration", "wireless-handover", "operational-records"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_inventory",
+      "type": "table",
+      "name": "wireless_inventory",
+      "filePath": "migrations/migrations/20261017_wireless_handover.sql",
+      "summary": "Stores inventory counts by wireless device type and records update metadata.",
+      "tags": ["database", "migration", "wireless-inventory", "device-counts"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_fixed_text",
+      "type": "table",
+      "name": "wireless_fixed_text",
+      "filePath": "migrations/migrations/20261017_wireless_handover.sql",
+      "summary": "Stores a single configurable fixed-text value with update metadata.",
+      "tags": ["database", "migration", "wireless-handover", "configuration"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/migrations/20261018_wireless_handover_v2.sql:wireless_deliveries",
+      "type": "table",
+      "name": "wireless_deliveries",
+      "filePath": "migrations/migrations/20261018_wireless_handover_v2.sql",
+      "summary": "Defines the delivery header structure for recipient, date, status, and return tracking, with indexes for common lookup fields. The migration transfers existing handover records into this model.",
+      "tags": ["database", "migration", "wireless-handover", "delivery-records"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:migrations/migrations/20261018_wireless_handover_v2.sql:wireless_delivery_devices",
+      "type": "table",
+      "name": "wireless_delivery_devices",
+      "filePath": "migrations/migrations/20261018_wireless_handover_v2.sql",
+      "summary": "Stores individual devices and their condition and accessory details under a delivery, enabling multiple devices per delivery.",
+      "tags": ["database", "migration", "wireless-devices", "delivery-details"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_handovers",
+      "target": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_inventory",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_handovers",
+      "target": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_fixed_text",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_handovers",
+      "target": "table:migrations/migrations/20261018_wireless_handover_v2.sql:wireless_deliveries",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:migrations/migrations/20261017_wireless_handover.sql:wireless_handovers",
+      "target": "table:migrations/migrations/20261018_wireless_handover_v2.sql:wireless_delivery_devices",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

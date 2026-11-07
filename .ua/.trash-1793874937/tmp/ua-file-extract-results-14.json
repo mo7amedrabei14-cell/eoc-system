@@ -1,0 +1,591 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 10,
+  "filesSkipped": [
+    "_head_index.css",
+    "after.txt",
+    "after_class.txt",
+    "before.txt",
+    "before_class.txt",
+    "main_after.txt",
+    "main_before.txt",
+    "main_new_func.txt",
+    "new_class.txt",
+    "new_func.txt"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 10,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 10
+    }
+  },
+  "results": [
+    {
+      "path": "AI_RADAR_APIFY_SOCIAL.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 37,
+      "nonEmptyLines": 28,
+      "sections": [
+        {
+          "heading": "EOC AI Radar — Apify social collection",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "What this change does",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Secret required",
+          "level": 2,
+          "line": 13
+        },
+        {
+          "heading": "Frequency and limits",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "Validation",
+          "level": 2,
+          "line": 24
+        },
+        {
+          "heading": "Vercel safeguard",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "Incident validation and budget protection (2026-10-13)",
+          "level": 2,
+          "line": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "AI_RADAR_SOCIAL_SOURCES.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 55,
+      "nonEmptyLines": 38,
+      "sections": [
+        {
+          "heading": "AI Radar: hourly collection, multi-level dedupe, and social connectors",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Schedule",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Duplicate prevention",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Social source connectors",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "Verification",
+          "level": 2,
+          "line": 46
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "Eoc Data Base.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 5,
+      "nonEmptyLines": 5,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "N1_AUDIT_REPORT.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 121,
+      "nonEmptyLines": 86,
+      "sections": [
+        {
+          "heading": "EOC System — Comprehensive N+1 audit and verification report",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Scope reviewed",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Read-path optimizations on this branch",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "Phase 1 — additional read-path closures on this branch",
+          "level": 2,
+          "line": 22
+        },
+        {
+          "heading": "Phase 2 — write-path batching (verified)",
+          "level": 2,
+          "line": 38
+        },
+        {
+          "heading": "Phase 3 — residual write-path closure and endpoint-level regression coverage",
+          "level": 2,
+          "line": 64
+        },
+        {
+          "heading": "Phase 4 — final sweep: remaining write-loop N+1 and runtime backfill correctness",
+          "level": 2,
+          "line": 80
+        },
+        {
+          "heading": "Post-audit review fixes — recipient routing and weather array typing",
+          "level": 2,
+          "line": 96
+        },
+        {
+          "heading": "Reproducible local PostgreSQL 18 test",
+          "level": 2,
+          "line": 105
+        },
+        {
+          "heading": "Release decision",
+          "level": 2,
+          "line": 119
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 10
+      }
+    },
+    {
+      "path": "PRODUCT.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 72,
+      "nonEmptyLines": 44,
+      "sections": [
+        {
+          "heading": "Product",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Platform",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "Stack",
+          "level": 2,
+          "line": 9
+        },
+        {
+          "heading": "Users",
+          "level": 2,
+          "line": 24
+        },
+        {
+          "heading": "Product Purpose",
+          "level": 2,
+          "line": 30
+        },
+        {
+          "heading": "Positioning",
+          "level": 2,
+          "line": 34
+        },
+        {
+          "heading": "Operating Context",
+          "level": 2,
+          "line": 38
+        },
+        {
+          "heading": "Capabilities and Constraints",
+          "level": 2,
+          "line": 42
+        },
+        {
+          "heading": "Brand Commitments",
+          "level": 2,
+          "line": 54
+        },
+        {
+          "heading": "Evidence on Hand",
+          "level": 2,
+          "line": 58
+        },
+        {
+          "heading": "Product Principles",
+          "level": 2,
+          "line": 62
+        },
+        {
+          "heading": "Accessibility & Inclusion",
+          "level": 2,
+          "line": 70
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 12
+      }
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 103,
+      "nonEmptyLines": 69,
+      "sections": [
+        {
+          "heading": "EOC System — Emergency Operations Center",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Main components",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Repository map",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "Run the frontend locally",
+          "level": 2,
+          "line": 30
+        },
+        {
+          "heading": "Run the backend locally",
+          "level": 2,
+          "line": 48
+        },
+        {
+          "heading": "Automated workers",
+          "level": 2,
+          "line": 63
+        },
+        {
+          "heading": "Configuration and security",
+          "level": 2,
+          "line": 75
+        },
+        {
+          "heading": "Verification",
+          "level": 2,
+          "line": 88
+        },
+        {
+          "heading": "ملخص بالعربية",
+          "level": 2,
+          "line": 97
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 9
+      }
+    },
+    {
+      "path": "SECURITY_AUDIT.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 225,
+      "nonEmptyLines": 175,
+      "sections": [
+        {
+          "heading": "🔐 تقرير التدقيق الأمني الكامل — EOC System",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "1) الملخص التنفيذي",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "2) النطاق والمنهجية",
+          "level": 2,
+          "line": 31
+        },
+        {
+          "heading": "3) الجرد النهائي (Phase 1 — Recon)",
+          "level": 2,
+          "line": 48
+        },
+        {
+          "heading": "4) النتائج حسب المرحلة",
+          "level": 2,
+          "line": 58
+        },
+        {
+          "heading": "Phase 2 — المصادقة (Authentication)",
+          "level": 3,
+          "line": 60
+        },
+        {
+          "heading": "Phase 3 — التفويض / RBAC / BOLA-IDOR (الأخطر في هذا التطبيق)",
+          "level": 3,
+          "line": 68
+        },
+        {
+          "heading": "Phase 4 — واجهات الـ API",
+          "level": 3,
+          "line": 77
+        },
+        {
+          "heading": "Phase 5 — قاعدة البيانات",
+          "level": 3,
+          "line": 84
+        },
+        {
+          "heading": "Phase 6 — الواجهة (Frontend)",
+          "level": 3,
+          "line": 89
+        },
+        {
+          "heading": "Phase 7 — المدخلات والمخرجات",
+          "level": 3,
+          "line": 95
+        },
+        {
+          "heading": "Phase 8 — الملفات",
+          "level": 3,
+          "line": 100
+        },
+        {
+          "heading": "Phase 9 — منطق العمل",
+          "level": 3,
+          "line": 103
+        },
+        {
+          "heading": "Phase 10 — حالات التسابق (Race)",
+          "level": 3,
+          "line": 108
+        },
+        {
+          "heading": "Phase 11 — الأسرار وإدارة المفاتيح",
+          "level": 3,
+          "line": 112
+        },
+        {
+          "heading": "Phase 12 — التبعيات",
+          "level": 3,
+          "line": 118
+        },
+        {
+          "heading": "Phase 13 — الأخطاء والتسجيل والكشف عن المعلومات",
+          "level": 3,
+          "line": 122
+        },
+        {
+          "heading": "Phase 14 — النشر والتكوين",
+          "level": 3,
+          "line": 127
+        },
+        {
+          "heading": "Phases 15–18 — التقرير، الإصلاح، إعادة الهجوم، الانحدار",
+          "level": 3,
+          "line": 133
+        },
+        {
+          "heading": "5) الإصلاحات المُطبَّقة (أمنية فقط، بأقل تغيير ممكن)",
+          "level": 2,
+          "line": 138
+        },
+        {
+          "heading": "6) إعادة الهجوم بعد الإصلاح (Phase 17) — الدليل",
+          "level": 2,
+          "line": 159
+        },
+        {
+          "heading": "7) اختبارات الانحدار بعد التغيير (Phase 18)",
+          "level": 2,
+          "line": 184
+        },
+        {
+          "heading": "8) لوحة الدرجات (Scorecard)",
+          "level": 2,
+          "line": 197
+        },
+        {
+          "heading": "9) ما يجب فعله خارج هذه الجلسة (بترتيب الأولوية)",
+          "level": 2,
+          "line": 213
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 24
+      }
+    },
+    {
+      "path": "SECURITY_VERIFICATION.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 212,
+      "nonEmptyLines": 154,
+      "sections": [
+        {
+          "heading": "🔎 تقرير التحقق النهائي المستقل — EOC System",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "A) الأسرار وتدوير المفاتيح",
+          "level": 2,
+          "line": 17
+        },
+        {
+          "heading": "B) الاعتماديات",
+          "level": 2,
+          "line": 33
+        },
+        {
+          "heading": "C) ترويسات الأمان (قياس حقيقي على الإنتاج)",
+          "level": 2,
+          "line": 51
+        },
+        {
+          "heading": "D) دورة حياة اتصالات قاعدة البيانات (أعلى أولوية تقنية)",
+          "level": 2,
+          "line": 76
+        },
+        {
+          "heading": "E) استنفاد الاتصالات (الرقم الحقيقي: `max_connections = 20`)",
+          "level": 2,
+          "line": 103
+        },
+        {
+          "heading": "F) تحليل عواصف إعادة المحاولة",
+          "level": 2,
+          "line": 147
+        },
+        {
+          "heading": "G) حمل رادار الـ AI",
+          "level": 2,
+          "line": 165
+        },
+        {
+          "heading": "H) انحدار الأمان بعد كل التغييرات",
+          "level": 2,
+          "line": 188
+        },
+        {
+          "heading": "I) ما يجب فعله (إجراءات مطلوبة، بترتيب الأولوية)",
+          "level": 2,
+          "line": 205
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 10
+      }
+    },
+    {
+      "path": "VISUAL_TRANSFORM_PLAN.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 332,
+      "nonEmptyLines": 210,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 0
+      }
+    },
+    {
+      "path": "openapi_spec.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "openapi",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "info",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "paths",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "components",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    }
+  ]
+}

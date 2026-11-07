@@ -1,0 +1,1100 @@
+{
+  "nodes": [
+    {
+      "id": "file:routers/branches.py",
+      "type": "file",
+      "name": "branches.py",
+      "filePath": "routers/branches.py",
+      "summary": "Defines the branch-list API endpoint backed by the shared database dependency.",
+      "tags": [
+        "api-handler",
+        "branch-management",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:routers/missions.py",
+      "type": "file",
+      "name": "missions.py",
+      "filePath": "routers/missions.py",
+      "summary": "Implements mission creation, listing, participant and activity updates, and spreadsheet export endpoints with request schemas.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:routers/users.py",
+      "type": "file",
+      "name": "users.py",
+      "filePath": "routers/users.py",
+      "summary": "Implements user listing and administration endpoints for account details, roles, status, and branch assignments.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:routers/volunteers.py",
+      "type": "file",
+      "name": "volunteers.py",
+      "filePath": "routers/volunteers.py",
+      "summary": "Provides endpoints to list and register volunteers using validated request data.",
+      "tags": [
+        "api-handler",
+        "volunteer-management",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:test_bug3_fix.py",
+      "type": "file",
+      "name": "test_bug3_fix.py",
+      "filePath": "test_bug3_fix.py",
+      "summary": "Contains regression checks for the audit and realtime-event behavior associated with a prior bug fix.",
+      "tags": [
+        "test",
+        "regression",
+        "audit-logging",
+        "realtime-events"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/branches.py:get_branches",
+      "type": "function",
+      "name": "get_branches",
+      "filePath": "routers/branches.py",
+      "lineRange": [
+        12,
+        19
+      ],
+      "summary": "Returns the available branches for the API client.",
+      "tags": [
+        "api-handler",
+        "branch-management",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/missions.py:create_mission",
+      "type": "function",
+      "name": "create_mission",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        41,
+        71
+      ],
+      "summary": "Validates and creates a mission through the mission API.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/missions.py:get_missions",
+      "type": "function",
+      "name": "get_missions",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        74,
+        80
+      ],
+      "summary": "Returns missions visible through the mission API.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/missions.py:add_mission_participant",
+      "type": "function",
+      "name": "add_mission_participant",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        102,
+        148
+      ],
+      "summary": "Adds a participant to a mission and records the associated activity.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/missions.py:add_beneficiary",
+      "type": "function",
+      "name": "add_beneficiary",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        159,
+        172
+      ],
+      "summary": "Adds beneficiary information to a mission.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/missions.py:add_itinerary",
+      "type": "function",
+      "name": "add_itinerary",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        185,
+        192
+      ],
+      "summary": "Adds itinerary information to a mission.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/missions.py:add_eoc_staff",
+      "type": "function",
+      "name": "add_eoc_staff",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        201,
+        208
+      ],
+      "summary": "Associates EOC staff with a mission.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/missions.py:add_mission_log",
+      "type": "function",
+      "name": "add_mission_log",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        219,
+        226
+      ],
+      "summary": "Adds a log entry to a mission.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/missions.py:export_mission_excel",
+      "type": "function",
+      "name": "export_mission_excel",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        232,
+        312
+      ],
+      "summary": "Builds and returns a spreadsheet export of mission data.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:routers/missions.py:CreateMissionRequest",
+      "type": "class",
+      "name": "CreateMissionRequest",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        18,
+        38
+      ],
+      "summary": "Validated request model for creating a mission.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:routers/missions.py:AddMissionParticipantRequest",
+      "type": "class",
+      "name": "AddMissionParticipantRequest",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        85,
+        99
+      ],
+      "summary": "Validated request model for adding a mission participant.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:routers/missions.py:BeneficiaryRequest",
+      "type": "class",
+      "name": "BeneficiaryRequest",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        153,
+        156
+      ],
+      "summary": "Validated request model for mission beneficiary data.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:routers/missions.py:ItineraryRequest",
+      "type": "class",
+      "name": "ItineraryRequest",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        177,
+        182
+      ],
+      "summary": "Validated request model for mission itinerary data.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:routers/missions.py:EOCStaffRequest",
+      "type": "class",
+      "name": "EOCStaffRequest",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        194,
+        198
+      ],
+      "summary": "Validated request model for associating EOC staff with a mission.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:routers/missions.py:MissionLogRequest",
+      "type": "class",
+      "name": "MissionLogRequest",
+      "filePath": "routers/missions.py",
+      "lineRange": [
+        210,
+        216
+      ],
+      "summary": "Validated request model for adding a mission log entry.",
+      "tags": [
+        "api-handler",
+        "mission-management",
+        "database",
+        "export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/users.py:_insert_user_branch_links",
+      "type": "function",
+      "name": "_insert_user_branch_links",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        10,
+        17
+      ],
+      "summary": "Inserts user-to-branch associations as a single driver batch.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/users.py:get_users",
+      "type": "function",
+      "name": "get_users",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        24,
+        47
+      ],
+      "summary": "Lists users with their administration and branch information.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/users.py:create_user",
+      "type": "function",
+      "name": "create_user",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        58,
+        84
+      ],
+      "summary": "Creates a user through the administration API.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/users.py:update_user",
+      "type": "function",
+      "name": "update_user",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        92,
+        113
+      ],
+      "summary": "Updates user account details.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/users.py:update_user_status",
+      "type": "function",
+      "name": "update_user_status",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        120,
+        138
+      ],
+      "summary": "Changes a user account status.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/users.py:update_user_role",
+      "type": "function",
+      "name": "update_user_role",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        145,
+        163
+      ],
+      "summary": "Changes a user role.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/users.py:update_user_branches",
+      "type": "function",
+      "name": "update_user_branches",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        170,
+        191
+      ],
+      "summary": "Replaces a user?s branch assignments using a batched write.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:routers/users.py:CreateUserRequest",
+      "type": "class",
+      "name": "CreateUserRequest",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        50,
+        55
+      ],
+      "summary": "Validated request model for creating a user account.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:routers/users.py:UpdateUserRequest",
+      "type": "class",
+      "name": "UpdateUserRequest",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        87,
+        89
+      ],
+      "summary": "Validated request model for changing user account details.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:routers/users.py:UpdateUserStatusRequest",
+      "type": "class",
+      "name": "UpdateUserStatusRequest",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        116,
+        117
+      ],
+      "summary": "Validated request model for changing user status.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:routers/users.py:UpdateUserRoleRequest",
+      "type": "class",
+      "name": "UpdateUserRoleRequest",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        141,
+        142
+      ],
+      "summary": "Validated request model for changing a user role.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:routers/users.py:UpdateUserBranchesRequest",
+      "type": "class",
+      "name": "UpdateUserBranchesRequest",
+      "filePath": "routers/users.py",
+      "lineRange": [
+        166,
+        167
+      ],
+      "summary": "Validated request model for changing a user?s branch assignments.",
+      "tags": [
+        "api-handler",
+        "user-management",
+        "authorization",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:routers/volunteers.py:get_volunteers",
+      "type": "function",
+      "name": "get_volunteers",
+      "filePath": "routers/volunteers.py",
+      "lineRange": [
+        10,
+        24
+      ],
+      "summary": "Lists volunteer records for the API client.",
+      "tags": [
+        "api-handler",
+        "volunteer-management",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:routers/volunteers.py:create_volunteer",
+      "type": "function",
+      "name": "create_volunteer",
+      "filePath": "routers/volunteers.py",
+      "lineRange": [
+        33,
+        47
+      ],
+      "summary": "Creates a volunteer record from validated request data.",
+      "tags": [
+        "api-handler",
+        "volunteer-management",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:routers/volunteers.py:CreateVolunteerRequest",
+      "type": "class",
+      "name": "CreateVolunteerRequest",
+      "filePath": "routers/volunteers.py",
+      "lineRange": [
+        26,
+        30
+      ],
+      "summary": "Validated request model for registering a volunteer.",
+      "tags": [
+        "api-handler",
+        "volunteer-management",
+        "database"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:routers/branches.py",
+      "target": "function:routers/branches.py:get_branches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/branches.py",
+      "target": "function:routers/branches.py:get_branches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:create_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:create_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:get_missions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:get_missions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_mission_participant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_mission_participant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_beneficiary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_beneficiary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_itinerary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_itinerary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_eoc_staff",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_eoc_staff",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_mission_log",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:add_mission_log",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:export_mission_excel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "function:routers/missions.py:export_mission_excel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:CreateMissionRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:CreateMissionRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:AddMissionParticipantRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:AddMissionParticipantRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:BeneficiaryRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:BeneficiaryRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:ItineraryRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:ItineraryRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:EOCStaffRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:EOCStaffRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:MissionLogRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "class:routers/missions.py:MissionLogRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:_insert_user_branch_links",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:_insert_user_branch_links",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:get_users",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:get_users",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:create_user",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:create_user",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:update_user",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:update_user",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:update_user_status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:update_user_status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:update_user_role",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:update_user_role",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:update_user_branches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "function:routers/users.py:update_user_branches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:CreateUserRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:CreateUserRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:UpdateUserRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:UpdateUserRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:UpdateUserStatusRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:UpdateUserStatusRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:UpdateUserRoleRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:UpdateUserRoleRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:UpdateUserBranchesRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "class:routers/users.py:UpdateUserBranchesRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/volunteers.py",
+      "target": "function:routers/volunteers.py:get_volunteers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/volunteers.py",
+      "target": "function:routers/volunteers.py:get_volunteers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/volunteers.py",
+      "target": "function:routers/volunteers.py:create_volunteer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/volunteers.py",
+      "target": "function:routers/volunteers.py:create_volunteer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/volunteers.py",
+      "target": "class:routers/volunteers.py:CreateVolunteerRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:routers/volunteers.py",
+      "target": "class:routers/volunteers.py:CreateVolunteerRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:routers/branches.py",
+      "target": "file:dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "file:audit.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:routers/missions.py",
+      "target": "file:dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:routers/users.py",
+      "target": "file:dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:routers/volunteers.py",
+      "target": "file:dependencies.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_bug3_fix.py",
+      "target": "file:audit.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_bug3_fix.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_bug3_fix.py",
+      "target": "file:realtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

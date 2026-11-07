@@ -1,0 +1,76 @@
+{
+  "nodes": [
+    {
+      "id": "document:frontend/MOBILE_RESPONSIVENESS_AUDIT.md",
+      "type": "document",
+      "name": "MOBILE_RESPONSIVENESS_AUDIT.md",
+      "filePath": "frontend/MOBILE_RESPONSIVENESS_AUDIT.md",
+      "summary": "Read-only mobile usability audit of the EOC React frontend at a narrow phone viewport. It catalogs layout, touch-target, table, and modal issues across several views, prioritizes fixes, and provides a CSS patch and verification checklist.",
+      "tags": ["documentation", "mobile-responsiveness", "accessibility", "ui-audit"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:frontend/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "frontend/README.md",
+      "summary": "Brief starter documentation for the React and Vite frontend template. It links to the available React plugins, React Compiler guidance, and recommendations for expanding ESLint configuration.",
+      "tags": ["documentation", "react", "vite", "frontend"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/fix-logo.bat",
+      "type": "file",
+      "name": "fix-logo.bat",
+      "filePath": "frontend/fix-logo.bat",
+      "summary": "Minimal Windows batch wrapper that invokes the frontend's logo-centering Node.js helper.",
+      "tags": ["script", "windows", "batch", "image-processing"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/fix-logo.ps1",
+      "type": "file",
+      "name": "fix-logo.ps1",
+      "filePath": "frontend/fix-logo.ps1",
+      "summary": "PowerShell image-processing utility that parses PNG data, calculates the visible alpha-bounds center, shifts pixels horizontally, and rebuilds the image. It includes byte-order, CRC, and PNG filter helpers.",
+      "tags": ["script", "powershell", "png-processing", "image-manipulation"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/index.html",
+      "type": "file",
+      "name": "index.html",
+      "filePath": "frontend/index.html",
+      "summary": "HTML shell for the frontend, configured for Arabic right-to-left display with mobile metadata and app icons. A small inline script restores saved theme and language settings before mounting the React entry module.",
+      "tags": ["markup", "html", "entry-point", "internationalization"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "frontend/package.json",
+      "summary": "Frontend npm manifest defining the Vite development, build, preview, lint, and test commands, along with React, mapping, animation, spreadsheet, and tooling dependencies.",
+      "tags": ["configuration", "npm", "build-system", "frontend"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/vercel.json",
+      "type": "config",
+      "name": "vercel.json",
+      "filePath": "frontend/vercel.json",
+      "summary": "Vercel deployment configuration that rewrites requests to the SPA entry page, sets browser security and privacy response headers, and controls deployment for selected branches.",
+      "tags": ["configuration", "deployment", "routing", "security"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "config:frontend/vercel.json",
+      "target": "file:frontend/index.html",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

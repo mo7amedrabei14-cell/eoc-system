@@ -1,0 +1,236 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 31,
+  "batchFiles": [
+    {
+      "path": "frontend/_unz__s/docProps/core.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/xl/_rels/workbook.xml.rels",
+      "language": "rels",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/_unz__s/xl/theme/theme1.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__s/xl/worksheets/sheet1.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/diag_tdz_order.mjs",
+      "language": "javascript",
+      "sizeLines": 97,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/eslint.config.js",
+      "language": "javascript",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/fix-logo-centering.cjs",
+      "language": "javascript",
+      "sizeLines": 167,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/postcss.config.js",
+      "language": "javascript",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/runtime_verify_time.mjs",
+      "language": "javascript",
+      "sizeLines": 227,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/Dashboard.jsx.bak",
+      "language": "bak",
+      "sizeLines": 12489,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/dashboardDataLoading.test.js",
+      "language": "javascript",
+      "sizeLines": 46,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/ownerMessagesDelivery.test.js",
+      "language": "javascript",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessReturnNotesLayout.test.js",
+      "language": "javascript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/workingToast.test.js",
+      "language": "javascript",
+      "sizeLines": 111,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/_p2.py",
+      "language": "python",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/activityMap.old.js",
+      "language": "javascript",
+      "sizeLines": 812,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/build_activity_map.py",
+      "language": "python",
+      "sizeLines": 253,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/clean_membership.py",
+      "language": "python",
+      "sizeLines": 135,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/daily_check.py",
+      "language": "python",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/fix_modals.py",
+      "language": "python",
+      "sizeLines": 164,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/login/loginScene.css",
+      "language": "css",
+      "sizeLines": 4035,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/motion/authEntryTransition.css",
+      "language": "css",
+      "sizeLines": 285,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/src/motion/premiumPageTransitions.css",
+      "language": "css",
+      "sizeLines": 54,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/tailwind.config.js",
+      "language": "javascript",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/vite.config.js",
+      "language": "javascript",
+      "sizeLines": 43,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "frontend/_unz__s/docProps/core.xml": [],
+    "frontend/_unz__s/xl/_rels/workbook.xml.rels": [],
+    "frontend/_unz__s/xl/theme/theme1.xml": [],
+    "frontend/_unz__s/xl/worksheets/sheet1.xml": [],
+    "frontend/diag_tdz_order.mjs": [],
+    "frontend/eslint.config.js": [],
+    "frontend/fix-logo-centering.cjs": [],
+    "frontend/postcss.config.js": [],
+    "frontend/runtime_verify_time.mjs": [],
+    "frontend/src/Dashboard.jsx.bak": [],
+    "frontend/src/__tests__/dashboardDataLoading.test.js": [],
+    "frontend/src/__tests__/ownerMessagesDelivery.test.js": [],
+    "frontend/src/__tests__/wirelessReturnNotesLayout.test.js": [],
+    "frontend/src/__tests__/workingToast.test.js": [],
+    "frontend/src/_p2.py": [],
+    "frontend/src/activityMap.old.js": [],
+    "frontend/src/build_activity_map.py": [],
+    "frontend/src/clean_membership.py": [],
+    "frontend/src/daily_check.py": [],
+    "frontend/src/fix_modals.py": [],
+    "frontend/src/login/loginScene.css": [],
+    "frontend/src/motion/authEntryTransition.css": [],
+    "frontend/src/motion/premiumPageTransitions.css": [],
+    "frontend/tailwind.config.js": [],
+    "frontend/vite.config.js": []
+  },
+  "neighborMap": {
+    "frontend/src/login/loginScene.css": [
+      {
+        "path": "frontend/src/Login.jsx",
+        "batchIndex": 4,
+        "symbols": [
+          "Login"
+        ]
+      }
+    ],
+    "frontend/src/motion/authEntryTransition.css": [
+      {
+        "path": "frontend/src/motion/AuthEntryTransition.jsx",
+        "batchIndex": 4,
+        "symbols": [
+          "AuthEntryTransitionProvider",
+          "useAuthEntryTransition"
+        ]
+      }
+    ],
+    "frontend/src/motion/premiumPageTransitions.css": [
+      {
+        "path": "frontend/src/App.jsx",
+        "batchIndex": 4,
+        "symbols": []
+      }
+    ]
+  }
+}

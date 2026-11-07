@@ -1,0 +1,355 @@
+{
+  "nodes": [
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/ff5355fa105f8347_0",
+      "type": "file",
+      "name": "ff5355fa105f8347_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/ff5355fa105f8347_0",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/index",
+      "type": "file",
+      "name": "index",
+      "filePath": "_shot_profile/Default/Code Cache/js/index",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/index-dir/the-real-index",
+      "type": "file",
+      "name": "the-real-index",
+      "filePath": "_shot_profile/Default/Code Cache/js/index-dir/the-real-index",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/wasm/index",
+      "type": "file",
+      "name": "index",
+      "filePath": "_shot_profile/Default/Code Cache/wasm/index",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/wasm/index-dir/the-real-index",
+      "type": "file",
+      "name": "the-real-index",
+      "filePath": "_shot_profile/Default/Code Cache/wasm/index-dir/the-real-index",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DIPS",
+      "type": "file",
+      "name": "DIPS",
+      "filePath": "_shot_profile/Default/DIPS",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DIPS-wal",
+      "type": "file",
+      "name": "DIPS-wal",
+      "filePath": "_shot_profile/Default/DIPS-wal",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnGraphiteCache/data_0",
+      "type": "file",
+      "name": "data_0",
+      "filePath": "_shot_profile/Default/DawnGraphiteCache/data_0",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnGraphiteCache/data_1",
+      "type": "file",
+      "name": "data_1",
+      "filePath": "_shot_profile/Default/DawnGraphiteCache/data_1",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnGraphiteCache/data_2",
+      "type": "file",
+      "name": "data_2",
+      "filePath": "_shot_profile/Default/DawnGraphiteCache/data_2",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnGraphiteCache/data_3",
+      "type": "file",
+      "name": "data_3",
+      "filePath": "_shot_profile/Default/DawnGraphiteCache/data_3",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnGraphiteCache/index",
+      "type": "file",
+      "name": "index",
+      "filePath": "_shot_profile/Default/DawnGraphiteCache/index",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnWebGPUCache/data_0",
+      "type": "file",
+      "name": "data_0",
+      "filePath": "_shot_profile/Default/DawnWebGPUCache/data_0",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnWebGPUCache/data_1",
+      "type": "file",
+      "name": "data_1",
+      "filePath": "_shot_profile/Default/DawnWebGPUCache/data_1",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnWebGPUCache/data_2",
+      "type": "file",
+      "name": "data_2",
+      "filePath": "_shot_profile/Default/DawnWebGPUCache/data_2",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnWebGPUCache/data_3",
+      "type": "file",
+      "name": "data_3",
+      "filePath": "_shot_profile/Default/DawnWebGPUCache/data_3",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/DawnWebGPUCache/index",
+      "type": "file",
+      "name": "index",
+      "filePath": "_shot_profile/Default/DawnWebGPUCache/index",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/GPUCache/data_0",
+      "type": "file",
+      "name": "data_0",
+      "filePath": "_shot_profile/Default/GPUCache/data_0",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/GPUCache/data_1",
+      "type": "file",
+      "name": "data_1",
+      "filePath": "_shot_profile/Default/GPUCache/data_1",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/GPUCache/data_2",
+      "type": "file",
+      "name": "data_2",
+      "filePath": "_shot_profile/Default/GPUCache/data_2",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/GPUCache/data_3",
+      "type": "file",
+      "name": "data_3",
+      "filePath": "_shot_profile/Default/GPUCache/data_3",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/GPUCache/index",
+      "type": "file",
+      "name": "index",
+      "filePath": "_shot_profile/Default/GPUCache/index",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Local Storage/leveldb/CURRENT",
+      "type": "file",
+      "name": "CURRENT",
+      "filePath": "_shot_profile/Default/Local Storage/leveldb/CURRENT",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Local Storage/leveldb/LOCK",
+      "type": "file",
+      "name": "LOCK",
+      "filePath": "_shot_profile/Default/Local Storage/leveldb/LOCK",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Local Storage/leveldb/LOG",
+      "type": "file",
+      "name": "LOG",
+      "filePath": "_shot_profile/Default/Local Storage/leveldb/LOG",
+      "summary": "Generated browser-profile cache or storage artifact; no application source structure was available for analysis.",
+      "tags": [
+        "browser-profile",
+        "generated-artifact",
+        "cache",
+        "opaque-data"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

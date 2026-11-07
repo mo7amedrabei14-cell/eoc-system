@@ -1,0 +1,218 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 32,
+  "batchFiles": [
+    {
+      "path": "perf/baseline22-dist/index.html",
+      "language": "html",
+      "sizeLines": 33,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "perf/harsh.mjs",
+      "language": "javascript",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/locustfile.py",
+      "language": "python",
+      "sizeLines": 80,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/snapshots_before/unavailable.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "run_diag.py",
+      "language": "python",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_diag2.py",
+      "language": "python",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "run_verify_new.py",
+      "language": "python",
+      "sizeLines": 200,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_api.py",
+      "language": "python",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_eq_schema_bootstrap.py",
+      "language": "python",
+      "sizeLines": 166,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_eq_schema_postgres_concurrency.py",
+      "language": "python",
+      "sizeLines": 166,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_idempotency_middleware_disconnect.py",
+      "language": "python",
+      "sizeLines": 96,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/n1_test_schema.sql",
+      "language": "sql",
+      "sizeLines": 17,
+      "fileCategory": "data"
+    },
+    {
+      "path": "tests/test_cleanup_stale_return_status.py",
+      "language": "python",
+      "sizeLines": 92,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/README.md",
+      "language": "markdown",
+      "sizeLines": 101,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "tools/check_credential_hygiene.py",
+      "language": "python",
+      "sizeLines": 670,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/tests/test_check_credential_hygiene.py",
+      "language": "python",
+      "sizeLines": 318,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_db_connections.py",
+      "language": "python",
+      "sizeLines": 217,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_secrets_history.py",
+      "language": "python",
+      "sizeLines": 160,
+      "fileCategory": "code"
+    },
+    {
+      "path": "weather_backfill.py.bak",
+      "language": "bak",
+      "sizeLines": 163,
+      "fileCategory": "code"
+    },
+    {
+      "path": "weather_extra_backfill.py",
+      "language": "python",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "تصنيفات مهام.xlsx",
+      "language": "xlsx",
+      "sizeLines": 2838,
+      "fileCategory": "code"
+    },
+    {
+      "path": "تصنيفات مهام_مراجعة.xlsx",
+      "language": "xlsx",
+      "sizeLines": 3715,
+      "fileCategory": "code"
+    },
+    {
+      "path": "خطة التشغيل.docx",
+      "language": "docx",
+      "sizeLines": 62,
+      "fileCategory": "code"
+    },
+    {
+      "path": "فورم المشاركين.xlsx",
+      "language": "xlsx",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "perf/baseline22-dist/index.html": [],
+    "perf/harsh.mjs": [],
+    "perf/locustfile.py": [],
+    "perf/snapshots_before/unavailable.json": [],
+    "run_diag.py": [],
+    "run_diag2.py": [],
+    "run_verify_new.py": [],
+    "test_api.py": [],
+    "test_eq_schema_bootstrap.py": [],
+    "test_eq_schema_postgres_concurrency.py": [
+      "test_eq_schema_bootstrap.py"
+    ],
+    "test_idempotency_middleware_disconnect.py": [],
+    "tests/n1_test_schema.sql": [],
+    "tests/test_cleanup_stale_return_status.py": [
+      "cleanup_stale_return_status.py"
+    ],
+    "tools/README.md": [],
+    "tools/check_credential_hygiene.py": [],
+    "tools/tests/test_check_credential_hygiene.py": [
+      "tools/check_credential_hygiene.py"
+    ],
+    "verify_db_connections.py": [],
+    "verify_secrets_history.py": [],
+    "weather_backfill.py.bak": [],
+    "weather_extra_backfill.py": [],
+    "تصنيفات مهام.xlsx": [],
+    "تصنيفات مهام_مراجعة.xlsx": [],
+    "خطة التشغيل.docx": [],
+    "فورم المشاركين.xlsx": []
+  },
+  "neighborMap": {
+    "tests/test_cleanup_stale_return_status.py": [
+      {
+        "path": "cleanup_stale_return_status.py",
+        "batchIndex": 30,
+        "symbols": [
+          "main"
+        ]
+      }
+    ]
+  }
+}

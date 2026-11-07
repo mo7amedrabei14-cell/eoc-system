@@ -1,0 +1,1102 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 4,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 4,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 4,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": [
+    {
+      "path": "frontend/src/RootErrorBoundary.jsx",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 54,
+      "nonEmptyLines": 46,
+      "classes": [
+        {
+          "name": "RootErrorBoundary",
+          "startLine": 16,
+          "endLine": 52,
+          "methods": [
+            "constructor",
+            "getDerivedStateFromError",
+            "componentDidMount",
+            "componentDidCatch",
+            "render"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "RootErrorBoundary",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "constructor",
+          "callee": "super",
+          "lineNumber": 18
+        },
+        {
+          "caller": "componentDidMount",
+          "callee": "markAppMounted",
+          "lineNumber": 28
+        },
+        {
+          "caller": "componentDidCatch",
+          "callee": "String",
+          "lineNumber": 33
+        },
+        {
+          "caller": "componentDidCatch",
+          "callee": "[error && error.stack, info && info.componentStack].filter(Boolean).join",
+          "lineNumber": 34
+        },
+        {
+          "caller": "componentDidCatch",
+          "callee": "[error && error.stack, info && info.componentStack].filter",
+          "lineNumber": 34
+        },
+        {
+          "caller": "componentDidCatch",
+          "callee": "reportClientError",
+          "lineNumber": 36
+        },
+        {
+          "caller": "componentDidCatch",
+          "callee": "showFatalScreen",
+          "lineNumber": 38
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "frontend/src/__tests__/clientErrorReport.test.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 311,
+      "nonEmptyLines": 274,
+      "functions": [
+        {
+          "name": "makeFakeDom",
+          "startLine": 35,
+          "endLine": 81,
+          "params": []
+        },
+        {
+          "name": "makeFakeWindow",
+          "startLine": 83,
+          "endLine": 95,
+          "params": []
+        },
+        {
+          "name": "installFakes",
+          "startLine": 101,
+          "endLine": 111,
+          "params": []
+        },
+        {
+          "name": "flush",
+          "startLine": 118,
+          "endLine": 118,
+          "params": []
+        },
+        {
+          "name": "fatal",
+          "startLine": 187,
+          "endLine": 187,
+          "params": []
+        },
+        {
+          "name": "collectTags",
+          "startLine": 190,
+          "endLine": 201,
+          "params": [
+            "node",
+            "tag"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "appendChild",
+          "callee": "this.children.push",
+          "lineNumber": 50
+        },
+        {
+          "caller": "appendChild",
+          "callee": "this.childNodes.push",
+          "lineNumber": 51
+        },
+        {
+          "caller": "appendChild",
+          "callee": "byId.set",
+          "lineNumber": 53
+        },
+        {
+          "caller": "removeChild",
+          "callee": "this.children.filter",
+          "lineNumber": 57
+        },
+        {
+          "caller": "removeChild",
+          "callee": "this.childNodes.filter",
+          "lineNumber": 58
+        },
+        {
+          "caller": "removeChild",
+          "callee": "byId.delete",
+          "lineNumber": 59
+        },
+        {
+          "caller": "getAttribute",
+          "callee": "Object.prototype.hasOwnProperty.call",
+          "lineNumber": 64
+        },
+        {
+          "caller": "makeFakeDom",
+          "callee": "makeEl",
+          "lineNumber": 72
+        },
+        {
+          "caller": "makeFakeDom",
+          "callee": "makeEl",
+          "lineNumber": 77
+        },
+        {
+          "caller": "makeFakeDom",
+          "callee": "makeEl",
+          "lineNumber": 78
+        },
+        {
+          "caller": "makeFakeDom",
+          "callee": "byId.get",
+          "lineNumber": 79
+        },
+        {
+          "caller": "writeText",
+          "callee": "this.written.push",
+          "lineNumber": 88
+        },
+        {
+          "caller": "writeText",
+          "callee": "Promise.resolve",
+          "lineNumber": 88
+        },
+        {
+          "caller": "getItem",
+          "callee": "this._m.has",
+          "lineNumber": 89
+        },
+        {
+          "caller": "getItem",
+          "callee": "this._m.get",
+          "lineNumber": 89
+        },
+        {
+          "caller": "setItem",
+          "callee": "this._m.set",
+          "lineNumber": 89
+        },
+        {
+          "caller": "setItem",
+          "callee": "String",
+          "lineNumber": 89
+        },
+        {
+          "caller": "getItem",
+          "callee": "this._m.has",
+          "lineNumber": 90
+        },
+        {
+          "caller": "getItem",
+          "callee": "this._m.get",
+          "lineNumber": 90
+        },
+        {
+          "caller": "setItem",
+          "callee": "this._m.set",
+          "lineNumber": 90
+        },
+        {
+          "caller": "setItem",
+          "callee": "String",
+          "lineNumber": 90
+        },
+        {
+          "caller": "makeFakeWindow",
+          "callee": "setTimeout",
+          "lineNumber": 92
+        },
+        {
+          "caller": "makeFakeWindow",
+          "callee": "clearTimeout",
+          "lineNumber": 93
+        },
+        {
+          "caller": "installFakes",
+          "callee": "makeFakeDom",
+          "lineNumber": 102
+        },
+        {
+          "caller": "installFakes",
+          "callee": "makeFakeWindow",
+          "lineNumber": 103
+        },
+        {
+          "caller": "installFakes",
+          "callee": "calls.push",
+          "lineNumber": 108
+        },
+        {
+          "caller": "installFakes",
+          "callee": "Promise.resolve",
+          "lineNumber": 109
+        },
+        {
+          "caller": "flush",
+          "callee": "setTimeout",
+          "lineNumber": 118
+        },
+        {
+          "caller": "fatal",
+          "callee": "dom.getElementById",
+          "lineNumber": 187
+        },
+        {
+          "caller": "walk",
+          "callee": "out.push",
+          "lineNumber": 195
+        },
+        {
+          "caller": "walk",
+          "callee": "walk",
+          "lineNumber": 196
+        },
+        {
+          "caller": "collectTags",
+          "callee": "walk",
+          "lineNumber": 199
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/clientErrorReport.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 383,
+      "nonEmptyLines": 337,
+      "functions": [
+        {
+          "name": "win",
+          "startLine": 40,
+          "endLine": 40,
+          "params": []
+        },
+        {
+          "name": "doc",
+          "startLine": 41,
+          "endLine": 41,
+          "params": []
+        },
+        {
+          "name": "cut",
+          "startLine": 43,
+          "endLine": 46,
+          "params": [
+            "value",
+            "max"
+          ]
+        },
+        {
+          "name": "sessionToken",
+          "startLine": 49,
+          "endLine": 59,
+          "params": []
+        },
+        {
+          "name": "sanitizeUrl",
+          "startLine": 65,
+          "endLine": 75,
+          "params": [
+            "raw"
+          ]
+        },
+        {
+          "name": "firstStackLine",
+          "startLine": 78,
+          "endLine": 78,
+          "params": [
+            "stack"
+          ]
+        },
+        {
+          "name": "seenKey",
+          "startLine": 82,
+          "endLine": 82,
+          "params": [
+            "kind",
+            "message",
+            "stack"
+          ]
+        },
+        {
+          "name": "isAppMounted",
+          "startLine": 85,
+          "endLine": 85,
+          "params": []
+        },
+        {
+          "name": "markAppMounted",
+          "startLine": 88,
+          "endLine": 93,
+          "params": []
+        },
+        {
+          "name": "reportClientError",
+          "startLine": 100,
+          "endLine": 140,
+          "params": []
+        },
+        {
+          "name": "showFatalScreen",
+          "startLine": 152,
+          "endLine": 272,
+          "params": []
+        },
+        {
+          "name": "hideFatalScreen",
+          "startLine": 275,
+          "endLine": 283,
+          "params": []
+        },
+        {
+          "name": "installClientErrorReporting",
+          "startLine": 289,
+          "endLine": 335,
+          "params": []
+        },
+        {
+          "name": "startMountWatchdog",
+          "startLine": 342,
+          "endLine": 362,
+          "params": []
+        },
+        {
+          "name": "__resetClientErrorState",
+          "startLine": 365,
+          "endLine": 374,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "CLIENT_ERRORS_API",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "FATAL_SCREEN_ID",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "MOUNT_FLAG",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "sanitizeUrl",
+          "line": 65,
+          "isDefault": false
+        },
+        {
+          "name": "isAppMounted",
+          "line": 85,
+          "isDefault": false
+        },
+        {
+          "name": "markAppMounted",
+          "line": 88,
+          "isDefault": false
+        },
+        {
+          "name": "reportClientError",
+          "line": 100,
+          "isDefault": false
+        },
+        {
+          "name": "showFatalScreen",
+          "line": 152,
+          "isDefault": false
+        },
+        {
+          "name": "hideFatalScreen",
+          "line": 275,
+          "isDefault": false
+        },
+        {
+          "name": "installClientErrorReporting",
+          "line": 289,
+          "isDefault": false
+        },
+        {
+          "name": "startMountWatchdog",
+          "line": 342,
+          "isDefault": false
+        },
+        {
+          "name": "__resetClientErrorState",
+          "line": 365,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "cut",
+          "callee": "String",
+          "lineNumber": 44
+        },
+        {
+          "caller": "cut",
+          "callee": "text.slice",
+          "lineNumber": 45
+        },
+        {
+          "caller": "sessionToken",
+          "callee": "win",
+          "lineNumber": 50
+        },
+        {
+          "caller": "sessionToken",
+          "callee": "w.sessionStorage.getItem",
+          "lineNumber": 53
+        },
+        {
+          "caller": "sessionToken",
+          "callee": "w.localStorage.getItem",
+          "lineNumber": 54
+        },
+        {
+          "caller": "sanitizeUrl",
+          "callee": "String(raw).trim",
+          "lineNumber": 68
+        },
+        {
+          "caller": "sanitizeUrl",
+          "callee": "String",
+          "lineNumber": 68
+        },
+        {
+          "caller": "sanitizeUrl",
+          "callee": "/^[a-z][a-z0-9+.-]*:\\/\\//i.test",
+          "lineNumber": 70
+        },
+        {
+          "caller": "sanitizeUrl",
+          "callee": "cut",
+          "lineNumber": 71
+        },
+        {
+          "caller": "sanitizeUrl",
+          "callee": "cut",
+          "lineNumber": 73
+        },
+        {
+          "caller": "sanitizeUrl",
+          "callee": "String(raw).split('?')[0].split",
+          "lineNumber": 73
+        },
+        {
+          "caller": "sanitizeUrl",
+          "callee": "String(raw).split",
+          "lineNumber": 73
+        },
+        {
+          "caller": "sanitizeUrl",
+          "callee": "String",
+          "lineNumber": 73
+        },
+        {
+          "caller": "firstStackLine",
+          "callee": "(String(stack || '').trim().split('\\n')[0] || '').slice",
+          "lineNumber": 78
+        },
+        {
+          "caller": "firstStackLine",
+          "callee": "String(stack || '').trim().split",
+          "lineNumber": 78
+        },
+        {
+          "caller": "firstStackLine",
+          "callee": "String(stack || '').trim",
+          "lineNumber": 78
+        },
+        {
+          "caller": "firstStackLine",
+          "callee": "String",
+          "lineNumber": 78
+        },
+        {
+          "caller": "seenKey",
+          "callee": "firstStackLine",
+          "lineNumber": 82
+        },
+        {
+          "caller": "isAppMounted",
+          "callee": "Boolean",
+          "lineNumber": 85
+        },
+        {
+          "caller": "isAppMounted",
+          "callee": "win",
+          "lineNumber": 85
+        },
+        {
+          "caller": "isAppMounted",
+          "callee": "win",
+          "lineNumber": 85
+        },
+        {
+          "caller": "markAppMounted",
+          "callee": "win",
+          "lineNumber": 89
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "win",
+          "lineNumber": 101
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "cut",
+          "lineNumber": 102
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "(message || '').trim",
+          "lineNumber": 102
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "Promise.resolve",
+          "lineNumber": 103
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "seenKey",
+          "lineNumber": 105
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "seen.has",
+          "lineNumber": 106
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "Promise.resolve",
+          "lineNumber": 106
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "seen.add",
+          "lineNumber": 107
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "Promise.resolve",
+          "lineNumber": 109
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "cut",
+          "lineNumber": 113
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "cut",
+          "lineNumber": 115
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "sanitizeUrl",
+          "lineNumber": 116
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "cut",
+          "lineNumber": 117
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "cut",
+          "lineNumber": 118
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "cut",
+          "lineNumber": 119
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "sessionToken",
+          "lineNumber": 125
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "fetch(CLIENT_ERRORS_API, {\n      method: 'POST',\n      headers,\n      body: JSON.stringify(body),\n      keepalive: true, // آخر إرسال: لازم يفلت حتى لو الصفحة بتتقفل أو بتتعمل reload\n    })\n      .then((res) => Boolean(res && res.ok))\n      .catch",
+          "lineNumber": 129
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "fetch(CLIENT_ERRORS_API, {\n      method: 'POST',\n      headers,\n      body: JSON.stringify(body),\n      keepalive: true, // آخر إرسال: لازم يفلت حتى لو الصفحة بتتقفل أو بتتعمل reload\n    })\n      .then",
+          "lineNumber": 129
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "fetch",
+          "lineNumber": 129
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "JSON.stringify",
+          "lineNumber": 132
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "Boolean",
+          "lineNumber": 135
+        },
+        {
+          "caller": "reportClientError",
+          "callee": "Promise.resolve",
+          "lineNumber": 138
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "doc",
+          "lineNumber": 153
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.getElementById",
+          "lineNumber": 157
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.documentElement.getAttribute",
+          "lineNumber": 160
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "reportClientError",
+          "lineNumber": 164
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 171
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "overlay.setAttribute",
+          "lineNumber": 173
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "overlay.setAttribute",
+          "lineNumber": 174
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 175
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 183
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 184
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "overlay.appendChild",
+          "lineNumber": 188
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 190
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 192
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "card.appendChild",
+          "lineNumber": 193
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 195
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 197
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "card.appendChild",
+          "lineNumber": 198
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 200
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 202
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "card.appendChild",
+          "lineNumber": 203
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 206
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "cut",
+          "lineNumber": 208
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 209
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "card.appendChild",
+          "lineNumber": 215
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 218
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 219
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "card.appendChild",
+          "lineNumber": 220
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 222
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 225
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "reloadBtn.addEventListener",
+          "lineNumber": 229
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "win()?.location?.reload",
+          "lineNumber": 230
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "win",
+          "lineNumber": 230
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "row.appendChild",
+          "lineNumber": 232
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 234
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 237
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "[\n      `الشاشة: ${win()?.location?.href || ''}`,\n      `الوقت: ${new Date().toISOString()}`,\n      `السبب: ${message || title || ''}`,\n      detail ? `\\n${detail}` : '',\n    ].join",
+          "lineNumber": 242
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "win",
+          "lineNumber": 243
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "new Date().toISOString",
+          "lineNumber": 244
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "copyBtn.addEventListener",
+          "lineNumber": 248
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "win",
+          "lineNumber": 251
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "nav.clipboard.writeText",
+          "lineNumber": 253
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "row.appendChild",
+          "lineNumber": 260
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.createElement",
+          "lineNumber": 262
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "Object.assign",
+          "lineNumber": 264
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "card.appendChild",
+          "lineNumber": 265
+        },
+        {
+          "caller": "showFatalScreen",
+          "callee": "d.body.appendChild",
+          "lineNumber": 267
+        },
+        {
+          "caller": "hideFatalScreen",
+          "callee": "doc",
+          "lineNumber": 276
+        },
+        {
+          "caller": "hideFatalScreen",
+          "callee": "d.getElementById",
+          "lineNumber": 279
+        },
+        {
+          "caller": "hideFatalScreen",
+          "callee": "el.parentNode.removeChild",
+          "lineNumber": 280
+        },
+        {
+          "caller": "installClientErrorReporting",
+          "callee": "win",
+          "lineNumber": 290
+        },
+        {
+          "caller": "onError",
+          "callee": "[event?.filename, event?.lineno ? `:${event.lineno}` : ''].join",
+          "lineNumber": 298
+        },
+        {
+          "caller": "onError",
+          "callee": "reportClientError",
+          "lineNumber": 299
+        },
+        {
+          "caller": "onError",
+          "callee": "isAppMounted",
+          "lineNumber": 301
+        },
+        {
+          "caller": "onError",
+          "callee": "showFatalScreen",
+          "lineNumber": 302
+        },
+        {
+          "caller": "onRejection",
+          "callee": "reportClientError",
+          "lineNumber": 318
+        },
+        {
+          "caller": "onRejection",
+          "callee": "isAppMounted",
+          "lineNumber": 319
+        },
+        {
+          "caller": "onRejection",
+          "callee": "showFatalScreen",
+          "lineNumber": 320
+        },
+        {
+          "caller": "installClientErrorReporting",
+          "callee": "w.addEventListener",
+          "lineNumber": 331
+        },
+        {
+          "caller": "installClientErrorReporting",
+          "callee": "w.addEventListener",
+          "lineNumber": 332
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "win",
+          "lineNumber": 343
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "doc",
+          "lineNumber": 344
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "w.setTimeout",
+          "lineNumber": 347
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "isAppMounted",
+          "lineNumber": 349
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "d.getElementById",
+          "lineNumber": 350
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "showFatalScreen",
+          "lineNumber": 352
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "Math.round",
+          "lineNumber": 355
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "Math.max",
+          "lineNumber": 359
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "Number",
+          "lineNumber": 359
+        },
+        {
+          "caller": "startMountWatchdog",
+          "callee": "w.clearTimeout",
+          "lineNumber": 361
+        },
+        {
+          "caller": "__resetClientErrorState",
+          "callee": "seen.clear",
+          "lineNumber": 366
+        },
+        {
+          "caller": "__resetClientErrorState",
+          "callee": "win",
+          "lineNumber": 367
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 12,
+        "functionCount": 15,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/main.jsx",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 47,
+      "nonEmptyLines": 44,
+      "functions": [
+        {
+          "name": "mount",
+          "startLine": 23,
+          "endLine": 31,
+          "params": [
+            "App"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "mount",
+          "callee": "createRoot(document.getElementById('root')).render",
+          "lineNumber": 24
+        },
+        {
+          "caller": "mount",
+          "callee": "createRoot",
+          "lineNumber": 24
+        },
+        {
+          "caller": "mount",
+          "callee": "document.getElementById",
+          "lineNumber": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

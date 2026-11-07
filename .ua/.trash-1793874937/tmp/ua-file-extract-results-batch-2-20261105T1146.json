@@ -1,0 +1,3746 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 26,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 26,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 26,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": [
+    {
+      "path": "_jl_db_integration.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 404,
+      "nonEmptyLines": 362,
+      "functions": [
+        {
+          "name": "make_mission",
+          "startLine": 33,
+          "endLine": 53,
+          "params": [
+            "name",
+            "status",
+            "participants",
+            "jl",
+            "prefix"
+          ]
+        },
+        {
+          "name": "create",
+          "startLine": 56,
+          "endLine": 59,
+          "params": [
+            "m"
+          ]
+        },
+        {
+          "name": "put",
+          "startLine": 62,
+          "endLine": 64,
+          "params": [
+            "mid",
+            "m"
+          ]
+        },
+        {
+          "name": "jl_entries",
+          "startLine": 67,
+          "endLine": 74,
+          "params": []
+        },
+        {
+          "name": "q",
+          "startLine": 81,
+          "endLine": 83,
+          "params": [
+            "cursor",
+            "sql",
+            "params"
+          ]
+        },
+        {
+          "name": "hours_for",
+          "startLine": 86,
+          "endLine": 119,
+          "params": [
+            "conn",
+            "mission_id",
+            "pid",
+            "status"
+          ]
+        },
+        {
+          "name": "check",
+          "startLine": 124,
+          "endLine": 127,
+          "params": [
+            "cond",
+            "label",
+            "extra"
+          ]
+        },
+        {
+          "name": "cleanup_test_data",
+          "startLine": 130,
+          "endLine": 163,
+          "params": []
+        },
+        {
+          "name": "main_test",
+          "startLine": 166,
+          "endLine": 400,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "make_mission",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "create",
+          "line": 56,
+          "isDefault": false
+        },
+        {
+          "name": "put",
+          "line": 62,
+          "isDefault": false
+        },
+        {
+          "name": "jl_entries",
+          "line": 67,
+          "isDefault": false
+        },
+        {
+          "name": "q",
+          "line": 81,
+          "isDefault": false
+        },
+        {
+          "name": "hours_for",
+          "line": 86,
+          "isDefault": false
+        },
+        {
+          "name": "check",
+          "line": 124,
+          "isDefault": false
+        },
+        {
+          "name": "cleanup_test_data",
+          "line": 130,
+          "isDefault": false
+        },
+        {
+          "name": "main_test",
+          "line": 166,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "make_mission",
+          "callee": "parts.append",
+          "lineNumber": 37
+        },
+        {
+          "caller": "make_mission",
+          "callee": "ParticipantModel",
+          "lineNumber": 37
+        },
+        {
+          "caller": "make_mission",
+          "callee": "RouteModel",
+          "lineNumber": 38
+        },
+        {
+          "caller": "make_mission",
+          "callee": "JoinLeaveEntryModel",
+          "lineNumber": 41
+        },
+        {
+          "caller": "make_mission",
+          "callee": "EOCStaffModel",
+          "lineNumber": 42
+        },
+        {
+          "caller": "make_mission",
+          "callee": "MissionCreate",
+          "lineNumber": 44
+        },
+        {
+          "caller": "make_mission",
+          "callee": "datetime.now().strftime",
+          "lineNumber": 50
+        },
+        {
+          "caller": "make_mission",
+          "callee": "datetime.now",
+          "lineNumber": 50
+        },
+        {
+          "caller": "create",
+          "callee": "main.create_mission",
+          "lineNumber": 57
+        },
+        {
+          "caller": "create",
+          "callee": "created_mission_ids.append",
+          "lineNumber": 58
+        },
+        {
+          "caller": "put",
+          "callee": "main.update_mission",
+          "lineNumber": 63
+        },
+        {
+          "caller": "q",
+          "callee": "cursor.execute",
+          "lineNumber": 82
+        },
+        {
+          "caller": "q",
+          "callee": "cursor.fetchall",
+          "lineNumber": 83
+        },
+        {
+          "caller": "hours_for",
+          "callee": "conn.cursor",
+          "lineNumber": 88
+        },
+        {
+          "caller": "hours_for",
+          "callee": "c.execute",
+          "lineNumber": 89
+        },
+        {
+          "caller": "hours_for",
+          "callee": "c.fetchone",
+          "lineNumber": 94
+        },
+        {
+          "caller": "hours_for",
+          "callee": "dict",
+          "lineNumber": 95
+        },
+        {
+          "caller": "hours_for",
+          "callee": "zip",
+          "lineNumber": 95
+        },
+        {
+          "caller": "hours_for",
+          "callee": "c.execute",
+          "lineNumber": 96
+        },
+        {
+          "caller": "hours_for",
+          "callee": "c.fetchall",
+          "lineNumber": 102
+        },
+        {
+          "caller": "hours_for",
+          "callee": "c.execute",
+          "lineNumber": 103
+        },
+        {
+          "caller": "hours_for",
+          "callee": "c.fetchall",
+          "lineNumber": 105
+        },
+        {
+          "caller": "hours_for",
+          "callee": "c.execute",
+          "lineNumber": 106
+        },
+        {
+          "caller": "hours_for",
+          "callee": "c.fetchall",
+          "lineNumber": 110
+        },
+        {
+          "caller": "hours_for",
+          "callee": "segs.append",
+          "lineNumber": 111
+        },
+        {
+          "caller": "hours_for",
+          "callee": "str",
+          "lineNumber": 111
+        },
+        {
+          "caller": "hours_for",
+          "callee": "str",
+          "lineNumber": 112
+        },
+        {
+          "caller": "hours_for",
+          "callee": "str",
+          "lineNumber": 113
+        },
+        {
+          "caller": "hours_for",
+          "callee": "main.fmt_dt",
+          "lineNumber": 114
+        },
+        {
+          "caller": "hours_for",
+          "callee": "main.fmt_dt",
+          "lineNumber": 114
+        },
+        {
+          "caller": "hours_for",
+          "callee": "main.compute_working_hours",
+          "lineNumber": 116
+        },
+        {
+          "caller": "check",
+          "callee": "AssertionError",
+          "lineNumber": 126
+        },
+        {
+          "caller": "check",
+          "callee": "print",
+          "lineNumber": 127
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "get_connection",
+          "lineNumber": 134
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "conn.cursor",
+          "lineNumber": 136
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "c.execute",
+          "lineNumber": 137
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "c.fetchall",
+          "lineNumber": 138
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "c.execute",
+          "lineNumber": 150
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "c.execute",
+          "lineNumber": 152
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "c.execute",
+          "lineNumber": 155
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "conn.commit",
+          "lineNumber": 157
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "print",
+          "lineNumber": 158
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "len",
+          "lineNumber": 158
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "len",
+          "lineNumber": 158
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "conn.rollback",
+          "lineNumber": 160
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "print",
+          "lineNumber": 161
+        },
+        {
+          "caller": "cleanup_test_data",
+          "callee": "conn.close",
+          "lineNumber": 163
+        },
+        {
+          "caller": "main_test",
+          "callee": "cleanup_test_data",
+          "lineNumber": 167
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 169
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 171
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 172
+        },
+        {
+          "caller": "main_test",
+          "callee": "get_connection",
+          "lineNumber": 173
+        },
+        {
+          "caller": "main_test",
+          "callee": "conn.cursor",
+          "lineNumber": 175
+        },
+        {
+          "caller": "main_test",
+          "callee": "q",
+          "lineNumber": 176
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 181
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 181
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 181
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 183
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 185
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 186
+        },
+        {
+          "caller": "main_test",
+          "callee": "hours_for",
+          "lineNumber": 189
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 190
+        },
+        {
+          "caller": "main_test",
+          "callee": "abs",
+          "lineNumber": 190
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 193
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 197
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 198
+        },
+        {
+          "caller": "main_test",
+          "callee": "conn.cursor",
+          "lineNumber": 199
+        },
+        {
+          "caller": "main_test",
+          "callee": "q",
+          "lineNumber": 200
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 207
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 207
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 207
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 208
+        },
+        {
+          "caller": "main_test",
+          "callee": "all",
+          "lineNumber": 208
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 209
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 210
+        },
+        {
+          "caller": "main_test",
+          "callee": "all",
+          "lineNumber": 210
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 213
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 217
+        },
+        {
+          "caller": "main_test",
+          "callee": "put",
+          "lineNumber": 218
+        },
+        {
+          "caller": "main_test",
+          "callee": "conn.cursor",
+          "lineNumber": 219
+        },
+        {
+          "caller": "main_test",
+          "callee": "q",
+          "lineNumber": 220
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 222
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 222
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 223
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 224
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 227
+        },
+        {
+          "caller": "main_test",
+          "callee": "all",
+          "lineNumber": 227
+        },
+        {
+          "caller": "main_test",
+          "callee": "hours_for",
+          "lineNumber": 230
+        },
+        {
+          "caller": "main_test",
+          "callee": "hours_for",
+          "lineNumber": 231
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 232
+        },
+        {
+          "caller": "main_test",
+          "callee": "abs",
+          "lineNumber": 232
+        },
+        {
+          "caller": "main_test",
+          "callee": "abs",
+          "lineNumber": 232
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 237
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 239
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 240
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 242
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 244
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 245
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 246
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 249
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 251
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 252
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 254
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 256
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 257
+        },
+        {
+          "caller": "main_test",
+          "callee": "AssertionError",
+          "lineNumber": 258
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 260
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 260
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 261
+        },
+        {
+          "caller": "hr_for",
+          "callee": "main.get_human_resources",
+          "lineNumber": 274
+        },
+        {
+          "caller": "hr_for",
+          "callee": "str",
+          "lineNumber": 275
+        },
+        {
+          "caller": "hr_for",
+          "callee": "r.get",
+          "lineNumber": 275
+        },
+        {
+          "caller": "main_test",
+          "callee": "volH",
+          "lineNumber": 277
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 278
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 282
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 283
+        },
+        {
+          "caller": "main_test",
+          "callee": "hr_for",
+          "lineNumber": 284
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 285
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 285
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 285
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 286
+        },
+        {
+          "caller": "main_test",
+          "callee": "abs",
+          "lineNumber": 286
+        },
+        {
+          "caller": "main_test",
+          "callee": "hr1[0].get",
+          "lineNumber": 286
+        },
+        {
+          "caller": "main_test",
+          "callee": "hr1[0].get",
+          "lineNumber": 287
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 288
+        },
+        {
+          "caller": "main_test",
+          "callee": "hr1[0].get",
+          "lineNumber": 288
+        },
+        {
+          "caller": "main_test",
+          "callee": "abs",
+          "lineNumber": 289
+        },
+        {
+          "caller": "main_test",
+          "callee": "hr1[0].get",
+          "lineNumber": 289
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 290
+        },
+        {
+          "caller": "main_test",
+          "callee": "volH",
+          "lineNumber": 293
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 294
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 299
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 300
+        },
+        {
+          "caller": "main_test",
+          "callee": "hr_for",
+          "lineNumber": 301
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 302
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 302
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 302
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 303
+        },
+        {
+          "caller": "main_test",
+          "callee": "abs",
+          "lineNumber": 303
+        },
+        {
+          "caller": "main_test",
+          "callee": "hr2[0].get",
+          "lineNumber": 303
+        },
+        {
+          "caller": "main_test",
+          "callee": "hr2[0].get",
+          "lineNumber": 305
+        },
+        {
+          "caller": "fresh_volunteer",
+          "callee": "conn.cursor",
+          "lineNumber": 313
+        },
+        {
+          "caller": "fresh_volunteer",
+          "callee": "c.execute",
+          "lineNumber": 314
+        },
+        {
+          "caller": "fresh_volunteer",
+          "callee": "c.fetchone",
+          "lineNumber": 319
+        },
+        {
+          "caller": "fresh_volunteer",
+          "callee": "created_volunteer_ids.append",
+          "lineNumber": 320
+        },
+        {
+          "caller": "fresh_volunteer",
+          "callee": "conn.commit",
+          "lineNumber": 321
+        },
+        {
+          "caller": "main_test",
+          "callee": "fresh_volunteer",
+          "lineNumber": 326
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 327
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 329
+        },
+        {
+          "caller": "main_test",
+          "callee": "conn.cursor",
+          "lineNumber": 330
+        },
+        {
+          "caller": "main_test",
+          "callee": "q",
+          "lineNumber": 331
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 334
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 336
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 336
+        },
+        {
+          "caller": "main_test",
+          "callee": "AssertionError",
+          "lineNumber": 338
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 340
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 341
+        },
+        {
+          "caller": "main_test",
+          "callee": "fresh_volunteer",
+          "lineNumber": 344
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 345
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 347
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 348
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 349
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 349
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 351
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 352
+        },
+        {
+          "caller": "main_test",
+          "callee": "fresh_volunteer",
+          "lineNumber": 355
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 356
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 358
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 359
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 361
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 361
+        },
+        {
+          "caller": "main_test",
+          "callee": "jl_entries",
+          "lineNumber": 363
+        },
+        {
+          "caller": "main_test",
+          "callee": "AssertionError",
+          "lineNumber": 364
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 366
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 366
+        },
+        {
+          "caller": "main_test",
+          "callee": "fresh_volunteer",
+          "lineNumber": 369
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 370
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 372
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 373
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 373
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 375
+        },
+        {
+          "caller": "main_test",
+          "callee": "fresh_volunteer",
+          "lineNumber": 378
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 379
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 381
+        },
+        {
+          "caller": "main_test",
+          "callee": "conn.cursor",
+          "lineNumber": 382
+        },
+        {
+          "caller": "main_test",
+          "callee": "q",
+          "lineNumber": 383
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 385
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 385
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 385
+        },
+        {
+          "caller": "main_test",
+          "callee": "main.end_participation",
+          "lineNumber": 386
+        },
+        {
+          "caller": "main_test",
+          "callee": "main.EndParticipationRequest",
+          "lineNumber": 386
+        },
+        {
+          "caller": "main_test",
+          "callee": "conn.cursor",
+          "lineNumber": 387
+        },
+        {
+          "caller": "main_test",
+          "callee": "q",
+          "lineNumber": 388
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 390
+        },
+        {
+          "caller": "main_test",
+          "callee": "len",
+          "lineNumber": 390
+        },
+        {
+          "caller": "main_test",
+          "callee": "str",
+          "lineNumber": 391
+        },
+        {
+          "caller": "main_test",
+          "callee": "create",
+          "lineNumber": 392
+        },
+        {
+          "caller": "main_test",
+          "callee": "make_mission",
+          "lineNumber": 392
+        },
+        {
+          "caller": "main_test",
+          "callee": "check",
+          "lineNumber": 394
+        },
+        {
+          "caller": "main_test",
+          "callee": "conn.close",
+          "lineNumber": 396
+        },
+        {
+          "caller": "main_test",
+          "callee": "cleanup_test_data",
+          "lineNumber": 399
+        },
+        {
+          "caller": "main_test",
+          "callee": "print",
+          "lineNumber": 400
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 9,
+        "functionCount": 9,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_jl_db_probe.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 53,
+      "nonEmptyLines": 44,
+      "callGraph": [
+        {
+          "caller": "table",
+          "callee": "c.execute",
+          "lineNumber": 11
+        },
+        {
+          "caller": "table",
+          "callee": "c.fetchone",
+          "lineNumber": 12
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_jl_logic_test.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 39,
+      "nonEmptyLines": 33,
+      "functions": [
+        {
+          "name": "arr",
+          "startLine": 22,
+          "endLine": 24,
+          "params": [
+            "arrival_time",
+            "completion"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "arr",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_make_seed.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 26,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_probe331.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 34,
+      "nonEmptyLines": 31,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_probe331_full.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 22,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_probe_users.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 18,
+      "nonEmptyLines": 17,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_test_eq_ingest.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 257,
+      "nonEmptyLines": 219,
+      "functions": [
+        {
+          "name": "check",
+          "startLine": 38,
+          "endLine": 41,
+          "params": [
+            "name",
+            "cond",
+            "detail"
+          ]
+        },
+        {
+          "name": "db_counts",
+          "startLine": 44,
+          "endLine": 51,
+          "params": [
+            "cur"
+          ]
+        },
+        {
+          "name": "run_cycle",
+          "startLine": 156,
+          "endLine": 160,
+          "params": [
+            "tag"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "check",
+          "line": 38,
+          "isDefault": false
+        },
+        {
+          "name": "db_counts",
+          "line": 44,
+          "isDefault": false
+        },
+        {
+          "name": "run_cycle",
+          "line": 156,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "check",
+          "callee": "print",
+          "lineNumber": 39
+        },
+        {
+          "caller": "check",
+          "callee": "FAILS.append",
+          "lineNumber": 41
+        },
+        {
+          "caller": "db_counts",
+          "callee": "cur.execute",
+          "lineNumber": 45
+        },
+        {
+          "caller": "db_counts",
+          "callee": "cur.fetchone",
+          "lineNumber": 46
+        },
+        {
+          "caller": "db_counts",
+          "callee": "cur.execute",
+          "lineNumber": 47
+        },
+        {
+          "caller": "db_counts",
+          "callee": "cur.fetchone",
+          "lineNumber": 48
+        },
+        {
+          "caller": "db_counts",
+          "callee": "cur.execute",
+          "lineNumber": 49
+        },
+        {
+          "caller": "db_counts",
+          "callee": "cur.fetchone",
+          "lineNumber": 50
+        },
+        {
+          "caller": "run_cycle",
+          "callee": "main._eq_intel_engine_cycle",
+          "lineNumber": 158
+        },
+        {
+          "caller": "run_cycle",
+          "callee": "str",
+          "lineNumber": 160
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "_test_sse.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 130,
+      "nonEmptyLines": 106,
+      "functions": [
+        {
+          "name": "check",
+          "startLine": 25,
+          "endLine": 28,
+          "params": [
+            "name",
+            "cond",
+            "detail"
+          ]
+        },
+        {
+          "name": "make_token",
+          "startLine": 31,
+          "endLine": 34,
+          "params": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "test_auth",
+          "startLine": 37,
+          "endLine": 43,
+          "params": []
+        },
+        {
+          "name": "test_stream_shapes",
+          "startLine": 46,
+          "endLine": 64,
+          "params": []
+        },
+        {
+          "name": "test_no_duplicate_contract",
+          "startLine": 67,
+          "endLine": 77,
+          "params": []
+        },
+        {
+          "name": "test_heartbeat_and_eof",
+          "startLine": 80,
+          "endLine": 89,
+          "params": []
+        },
+        {
+          "name": "test_poll_untouched",
+          "startLine": 92,
+          "endLine": 101,
+          "params": []
+        },
+        {
+          "name": "test_status_readonly",
+          "startLine": 104,
+          "endLine": 113,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "check",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "make_token",
+          "line": 31,
+          "isDefault": false
+        },
+        {
+          "name": "test_auth",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "test_stream_shapes",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "test_no_duplicate_contract",
+          "line": 67,
+          "isDefault": false
+        },
+        {
+          "name": "test_heartbeat_and_eof",
+          "line": 80,
+          "isDefault": false
+        },
+        {
+          "name": "test_poll_untouched",
+          "line": 92,
+          "isDefault": false
+        },
+        {
+          "name": "test_status_readonly",
+          "line": 104,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "check",
+          "callee": "print",
+          "lineNumber": 26
+        },
+        {
+          "caller": "check",
+          "callee": "FAILS.append",
+          "lineNumber": 28
+        },
+        {
+          "caller": "make_token",
+          "callee": "main.create_access_token",
+          "lineNumber": 34
+        },
+        {
+          "caller": "test_auth",
+          "callee": "print",
+          "lineNumber": 38
+        },
+        {
+          "caller": "test_auth",
+          "callee": "TestClient",
+          "lineNumber": 39
+        },
+        {
+          "caller": "test_auth",
+          "callee": "c.get",
+          "lineNumber": 40
+        },
+        {
+          "caller": "test_auth",
+          "callee": "check",
+          "lineNumber": 41
+        },
+        {
+          "caller": "test_auth",
+          "callee": "c.get",
+          "lineNumber": 42
+        },
+        {
+          "caller": "test_auth",
+          "callee": "check",
+          "lineNumber": 43
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "print",
+          "lineNumber": 47
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "make_token",
+          "lineNumber": 48
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "TestClient",
+          "lineNumber": 49
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "c.get",
+          "lineNumber": 51
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "check",
+          "lineNumber": 52
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "pol.json",
+          "lineNumber": 53
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "check",
+          "lineNumber": 54
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "str",
+          "lineNumber": 54
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "list",
+          "lineNumber": 54
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "check",
+          "lineNumber": 55
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "pj.get",
+          "lineNumber": 55
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "pj.get",
+          "lineNumber": 57
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "c.get",
+          "lineNumber": 58
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "check",
+          "lineNumber": 59
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "check",
+          "lineNumber": 60
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "sse.headers.get",
+          "lineNumber": 61
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "sse.headers.get",
+          "lineNumber": 62
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "check",
+          "lineNumber": 63
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "sse.headers.get",
+          "lineNumber": 63
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "check",
+          "lineNumber": 64
+        },
+        {
+          "caller": "test_stream_shapes",
+          "callee": "sse.headers.get",
+          "lineNumber": 64
+        },
+        {
+          "caller": "test_no_duplicate_contract",
+          "callee": "print",
+          "lineNumber": 68
+        },
+        {
+          "caller": "test_no_duplicate_contract",
+          "callee": "inspect.getsource",
+          "lineNumber": 70
+        },
+        {
+          "caller": "test_no_duplicate_contract",
+          "callee": "check",
+          "lineNumber": 72
+        },
+        {
+          "caller": "test_no_duplicate_contract",
+          "callee": "check",
+          "lineNumber": 73
+        },
+        {
+          "caller": "test_no_duplicate_contract",
+          "callee": "check",
+          "lineNumber": 77
+        },
+        {
+          "caller": "test_heartbeat_and_eof",
+          "callee": "print",
+          "lineNumber": 81
+        },
+        {
+          "caller": "test_heartbeat_and_eof",
+          "callee": "inspect.getsource",
+          "lineNumber": 83
+        },
+        {
+          "caller": "test_heartbeat_and_eof",
+          "callee": "check",
+          "lineNumber": 84
+        },
+        {
+          "caller": "test_heartbeat_and_eof",
+          "callee": "check",
+          "lineNumber": 85
+        },
+        {
+          "caller": "test_heartbeat_and_eof",
+          "callee": "check",
+          "lineNumber": 86
+        },
+        {
+          "caller": "test_heartbeat_and_eof",
+          "callee": "check",
+          "lineNumber": 87
+        },
+        {
+          "caller": "test_heartbeat_and_eof",
+          "callee": "print",
+          "lineNumber": 88
+        },
+        {
+          "caller": "test_poll_untouched",
+          "callee": "print",
+          "lineNumber": 93
+        },
+        {
+          "caller": "test_poll_untouched",
+          "callee": "open(\"frontend/src/Dashboard.jsx\", encoding=\"utf-8\").read",
+          "lineNumber": 95
+        },
+        {
+          "caller": "test_poll_untouched",
+          "callee": "open",
+          "lineNumber": 95
+        },
+        {
+          "caller": "test_poll_untouched",
+          "callee": "check",
+          "lineNumber": 96
+        },
+        {
+          "caller": "test_poll_untouched",
+          "callee": "check",
+          "lineNumber": 98
+        },
+        {
+          "caller": "test_poll_untouched",
+          "callee": "check",
+          "lineNumber": 100
+        },
+        {
+          "caller": "test_status_readonly",
+          "callee": "print",
+          "lineNumber": 105
+        },
+        {
+          "caller": "test_status_readonly",
+          "callee": "open(\"main.py\", encoding=\"utf-8\").read",
+          "lineNumber": 106
+        },
+        {
+          "caller": "test_status_readonly",
+          "callee": "open",
+          "lineNumber": 106
+        },
+        {
+          "caller": "test_status_readonly",
+          "callee": "src.index",
+          "lineNumber": 107
+        },
+        {
+          "caller": "test_status_readonly",
+          "callee": "check",
+          "lineNumber": 110
+        },
+        {
+          "caller": "test_status_readonly",
+          "callee": "check",
+          "lineNumber": 111
+        },
+        {
+          "caller": "test_status_readonly",
+          "callee": "check",
+          "lineNumber": 112
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 8,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "add_constraints.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 189,
+      "nonEmptyLines": 170,
+      "functions": [
+        {
+          "name": "add_constraints",
+          "startLine": 5,
+          "endLine": 186,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "add_constraints",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "add_constraints",
+          "callee": "get_connection",
+          "lineNumber": 6
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "conn.cursor",
+          "lineNumber": 8
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 11
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 15
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 17
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 19
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 23
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 27
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 29
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 33
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 37
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 39
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 41
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 44
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 48
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 50
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 54
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 58
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 60
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 62
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 65
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 69
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 71
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 75
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 79
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 81
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 83
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 86
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 90
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 92
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 97
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 102
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 104
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 106
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 110
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 115
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 117
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 119
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 123
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 128
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 130
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 132
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 136
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 141
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 143
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 145
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 149
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 154
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 156
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 158
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "cur.execute",
+          "lineNumber": 163
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 168
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 170
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 172
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "conn.commit",
+          "lineNumber": 180
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 181
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "print",
+          "lineNumber": 183
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "conn.rollback",
+          "lineNumber": 184
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "conn.close",
+          "lineNumber": 186
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "add_constraints_v2.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 117,
+      "nonEmptyLines": 109,
+      "functions": [
+        {
+          "name": "execute_alter_table",
+          "startLine": 5,
+          "endLine": 19,
+          "params": [
+            "statement",
+            "success_msg",
+            "error_msg_prefix"
+          ]
+        },
+        {
+          "name": "add_constraints",
+          "startLine": 21,
+          "endLine": 114,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "execute_alter_table",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "add_constraints",
+          "line": 21,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "execute_alter_table",
+          "callee": "get_connection",
+          "lineNumber": 6
+        },
+        {
+          "caller": "execute_alter_table",
+          "callee": "conn.cursor",
+          "lineNumber": 8
+        },
+        {
+          "caller": "execute_alter_table",
+          "callee": "cur.execute",
+          "lineNumber": 9
+        },
+        {
+          "caller": "execute_alter_table",
+          "callee": "conn.commit",
+          "lineNumber": 10
+        },
+        {
+          "caller": "execute_alter_table",
+          "callee": "print",
+          "lineNumber": 11
+        },
+        {
+          "caller": "execute_alter_table",
+          "callee": "print",
+          "lineNumber": 14
+        },
+        {
+          "caller": "execute_alter_table",
+          "callee": "print",
+          "lineNumber": 16
+        },
+        {
+          "caller": "execute_alter_table",
+          "callee": "conn.rollback",
+          "lineNumber": 17
+        },
+        {
+          "caller": "execute_alter_table",
+          "callee": "conn.close",
+          "lineNumber": 19
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 23
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 31
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 41
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 49
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 59
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 67
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 77
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 85
+        },
+        {
+          "caller": "add_constraints",
+          "callee": "execute_alter_table",
+          "lineNumber": 106
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "audit_test.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 371,
+      "nonEmptyLines": 337,
+      "functions": [
+        {
+          "name": "check",
+          "startLine": 27,
+          "endLine": 34,
+          "params": [
+            "name",
+            "cond",
+            "extra"
+          ]
+        },
+        {
+          "name": "route",
+          "startLine": 36,
+          "endLine": 38,
+          "params": [
+            "group",
+            "dep_d",
+            "dep_t",
+            "arr_d",
+            "arr_t"
+          ]
+        },
+        {
+          "name": "mission_data",
+          "startLine": 40,
+          "endLine": 49,
+          "params": [
+            "**over"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "check",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "route",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "mission_data",
+          "line": 40,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "check",
+          "callee": "print",
+          "lineNumber": 31
+        },
+        {
+          "caller": "check",
+          "callee": "print",
+          "lineNumber": 34
+        },
+        {
+          "caller": "mission_data",
+          "callee": "base.update",
+          "lineNumber": 48
+        },
+        {
+          "caller": "find",
+          "callee": "hr.items",
+          "lineNumber": 274
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "auth.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 327,
+      "nonEmptyLines": 255,
+      "functions": [
+        {
+          "name": "get_session_generation",
+          "startLine": 32,
+          "endLine": 55,
+          "params": []
+        },
+        {
+          "name": "invalidate_session_generation_cache",
+          "startLine": 58,
+          "endLine": 59,
+          "params": []
+        },
+        {
+          "name": "authenticate_user",
+          "startLine": 62,
+          "endLine": 102,
+          "params": [
+            "username",
+            "password"
+          ]
+        },
+        {
+          "name": "create_access_token",
+          "startLine": 105,
+          "endLine": 119,
+          "params": [
+            "user_id",
+            "generation"
+          ]
+        },
+        {
+          "name": "get_effective_permissions",
+          "startLine": 121,
+          "endLine": 156,
+          "params": [
+            "role_id"
+          ]
+        },
+        {
+          "name": "get_user_branches",
+          "startLine": 158,
+          "endLine": 196,
+          "params": [
+            "user_id",
+            "connection"
+          ]
+        },
+        {
+          "name": "get_user_role",
+          "startLine": 198,
+          "endLine": 232,
+          "params": [
+            "user_id",
+            "connection"
+          ]
+        },
+        {
+          "name": "check_permission",
+          "startLine": 234,
+          "endLine": 242,
+          "params": [
+            "user_id",
+            "permission_code"
+          ]
+        },
+        {
+          "name": "check_branch_access",
+          "startLine": 244,
+          "endLine": 260,
+          "params": [
+            "user_id",
+            "branch_id"
+          ]
+        },
+        {
+          "name": "authorize",
+          "startLine": 262,
+          "endLine": 274,
+          "params": [
+            "user_id",
+            "permission_code",
+            "branch_id"
+          ]
+        },
+        {
+          "name": "get_current_user_id",
+          "startLine": 276,
+          "endLine": 309,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "explain_token_failure",
+          "startLine": 311,
+          "endLine": 327,
+          "params": [
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "get_session_generation",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "invalidate_session_generation_cache",
+          "line": 58,
+          "isDefault": false
+        },
+        {
+          "name": "authenticate_user",
+          "line": 62,
+          "isDefault": false
+        },
+        {
+          "name": "create_access_token",
+          "line": 105,
+          "isDefault": false
+        },
+        {
+          "name": "get_effective_permissions",
+          "line": 121,
+          "isDefault": false
+        },
+        {
+          "name": "get_user_branches",
+          "line": 158,
+          "isDefault": false
+        },
+        {
+          "name": "get_user_role",
+          "line": 198,
+          "isDefault": false
+        },
+        {
+          "name": "check_permission",
+          "line": 234,
+          "isDefault": false
+        },
+        {
+          "name": "check_branch_access",
+          "line": 244,
+          "isDefault": false
+        },
+        {
+          "name": "authorize",
+          "line": 262,
+          "isDefault": false
+        },
+        {
+          "name": "get_current_user_id",
+          "line": 276,
+          "isDefault": false
+        },
+        {
+          "name": "explain_token_failure",
+          "line": 311,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "get_session_generation",
+          "callee": "time.monotonic",
+          "lineNumber": 34
+        },
+        {
+          "caller": "get_session_generation",
+          "callee": "get_connection",
+          "lineNumber": 40
+        },
+        {
+          "caller": "get_session_generation",
+          "callee": "connection.cursor",
+          "lineNumber": 43
+        },
+        {
+          "caller": "get_session_generation",
+          "callee": "cursor.execute",
+          "lineNumber": 44
+        },
+        {
+          "caller": "get_session_generation",
+          "callee": "cursor.fetchone",
+          "lineNumber": 45
+        },
+        {
+          "caller": "get_session_generation",
+          "callee": "int",
+          "lineNumber": 46
+        },
+        {
+          "caller": "get_session_generation",
+          "callee": "connection.close",
+          "lineNumber": 48
+        },
+        {
+          "caller": "get_session_generation",
+          "callee": "_session_gen_cache.update",
+          "lineNumber": 50
+        },
+        {
+          "caller": "authenticate_user",
+          "callee": "get_connection",
+          "lineNumber": 63
+        },
+        {
+          "caller": "authenticate_user",
+          "callee": "connection.cursor",
+          "lineNumber": 66
+        },
+        {
+          "caller": "authenticate_user",
+          "callee": "cursor.execute",
+          "lineNumber": 67
+        },
+        {
+          "caller": "authenticate_user",
+          "callee": "cursor.fetchone",
+          "lineNumber": 81
+        },
+        {
+          "caller": "authenticate_user",
+          "callee": "password_hash.verify",
+          "lineNumber": 92
+        },
+        {
+          "caller": "authenticate_user",
+          "callee": "connection.close",
+          "lineNumber": 102
+        },
+        {
+          "caller": "create_access_token",
+          "callee": "datetime.now",
+          "lineNumber": 106
+        },
+        {
+          "caller": "create_access_token",
+          "callee": "timedelta",
+          "lineNumber": 106
+        },
+        {
+          "caller": "create_access_token",
+          "callee": "str",
+          "lineNumber": 109
+        },
+        {
+          "caller": "create_access_token",
+          "callee": "int",
+          "lineNumber": 112
+        },
+        {
+          "caller": "create_access_token",
+          "callee": "get_session_generation",
+          "lineNumber": 112
+        },
+        {
+          "caller": "create_access_token",
+          "callee": "jwt.encode",
+          "lineNumber": 115
+        },
+        {
+          "caller": "get_effective_permissions",
+          "callee": "get_connection",
+          "lineNumber": 122
+        },
+        {
+          "caller": "get_effective_permissions",
+          "callee": "connection.cursor",
+          "lineNumber": 125
+        },
+        {
+          "caller": "get_effective_permissions",
+          "callee": "cursor.execute",
+          "lineNumber": 126
+        },
+        {
+          "caller": "get_effective_permissions",
+          "callee": "cursor.fetchall",
+          "lineNumber": 151
+        },
+        {
+          "caller": "get_effective_permissions",
+          "callee": "connection.close",
+          "lineNumber": 156
+        },
+        {
+          "caller": "get_user_branches",
+          "callee": "get_connection",
+          "lineNumber": 163
+        },
+        {
+          "caller": "get_user_branches",
+          "callee": "connection.cursor",
+          "lineNumber": 166
+        },
+        {
+          "caller": "get_user_branches",
+          "callee": "cursor.execute",
+          "lineNumber": 167
+        },
+        {
+          "caller": "get_user_branches",
+          "callee": "cursor.fetchall",
+          "lineNumber": 183
+        },
+        {
+          "caller": "get_user_branches",
+          "callee": "connection.close",
+          "lineNumber": 196
+        },
+        {
+          "caller": "get_user_role",
+          "callee": "get_connection",
+          "lineNumber": 202
+        },
+        {
+          "caller": "get_user_role",
+          "callee": "connection.cursor",
+          "lineNumber": 205
+        },
+        {
+          "caller": "get_user_role",
+          "callee": "cursor.execute",
+          "lineNumber": 206
+        },
+        {
+          "caller": "get_user_role",
+          "callee": "cursor.fetchone",
+          "lineNumber": 220
+        },
+        {
+          "caller": "get_user_role",
+          "callee": "connection.close",
+          "lineNumber": 232
+        },
+        {
+          "caller": "check_permission",
+          "callee": "get_user_role",
+          "lineNumber": 235
+        },
+        {
+          "caller": "check_permission",
+          "callee": "get_effective_permissions",
+          "lineNumber": 240
+        },
+        {
+          "caller": "check_branch_access",
+          "callee": "get_user_role",
+          "lineNumber": 245
+        },
+        {
+          "caller": "check_branch_access",
+          "callee": "get_user_branches",
+          "lineNumber": 253
+        },
+        {
+          "caller": "authorize",
+          "callee": "check_permission",
+          "lineNumber": 267
+        },
+        {
+          "caller": "authorize",
+          "callee": "check_branch_access",
+          "lineNumber": 271
+        },
+        {
+          "caller": "get_current_user_id",
+          "callee": "jwt.decode",
+          "lineNumber": 285
+        },
+        {
+          "caller": "get_current_user_id",
+          "callee": "payload.get",
+          "lineNumber": 291
+        },
+        {
+          "caller": "get_current_user_id",
+          "callee": "get_session_generation",
+          "lineNumber": 299
+        },
+        {
+          "caller": "get_current_user_id",
+          "callee": "int",
+          "lineNumber": 303
+        },
+        {
+          "caller": "get_current_user_id",
+          "callee": "payload.get",
+          "lineNumber": 303
+        },
+        {
+          "caller": "get_current_user_id",
+          "callee": "int",
+          "lineNumber": 306
+        },
+        {
+          "caller": "explain_token_failure",
+          "callee": "jwt.decode",
+          "lineNumber": 314
+        },
+        {
+          "caller": "explain_token_failure",
+          "callee": "int",
+          "lineNumber": 317
+        },
+        {
+          "caller": "explain_token_failure",
+          "callee": "payload.get",
+          "lineNumber": 317
+        },
+        {
+          "caller": "explain_token_failure",
+          "callee": "get_session_generation",
+          "lineNumber": 322
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 12,
+        "functionCount": 12,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "check_catalog.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 19,
+      "nonEmptyLines": 14,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "check_eq_event_delay.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 20,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "check_eq_timing.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 19,
+      "nonEmptyLines": 17,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "check_sources.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 7,
+      "nonEmptyLines": 7,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "clean_eq_audit.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 10,
+      "nonEmptyLines": 8,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "db.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 145,
+      "nonEmptyLines": 128,
+      "functions": [
+        {
+          "name": "_is_pooled",
+          "startLine": 57,
+          "endLine": 72,
+          "params": [
+            "url"
+          ]
+        },
+        {
+          "name": "_clean_dsn",
+          "startLine": 75,
+          "endLine": 87,
+          "params": [
+            "url"
+          ]
+        },
+        {
+          "name": "_pooler_kwargs",
+          "startLine": 90,
+          "endLine": 92,
+          "params": [
+            "url"
+          ]
+        },
+        {
+          "name": "_is_retryable",
+          "startLine": 95,
+          "endLine": 97,
+          "params": [
+            "exc"
+          ]
+        },
+        {
+          "name": "get_connection",
+          "startLine": 100,
+          "endLine": 145,
+          "params": [
+            "max_attempts",
+            "budget_s"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "_is_pooled",
+          "line": 57,
+          "isDefault": false
+        },
+        {
+          "name": "_clean_dsn",
+          "line": 75,
+          "isDefault": false
+        },
+        {
+          "name": "_pooler_kwargs",
+          "line": 90,
+          "isDefault": false
+        },
+        {
+          "name": "_is_retryable",
+          "line": 95,
+          "isDefault": false
+        },
+        {
+          "name": "get_connection",
+          "line": 100,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_is_pooled",
+          "callee": "(os.getenv(\"DB_VIA_POOLER\") or \"\").strip().lower",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "(os.getenv(\"DB_VIA_POOLER\") or \"\").strip",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "os.getenv",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "urlparse",
+          "lineNumber": 64
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "k.lower",
+          "lineNumber": 67
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "parse_qsl",
+          "lineNumber": 67
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "params.get(\"pgbouncer\", \"\").lower",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "params.get",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "params.get(\"pooler\", \"\").lower",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "params.get",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "(parsed.hostname or \"\").lower",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "bool",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "bool",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_is_pooled",
+          "callee": "str",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_clean_dsn",
+          "callee": "urlparse",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_clean_dsn",
+          "callee": "parse_qsl",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_clean_dsn",
+          "callee": "k.lower",
+          "lineNumber": 84
+        },
+        {
+          "caller": "_clean_dsn",
+          "callee": "len",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_clean_dsn",
+          "callee": "len",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_clean_dsn",
+          "callee": "urlunparse",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_clean_dsn",
+          "callee": "parsed._replace",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_clean_dsn",
+          "callee": "urlencode",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_pooler_kwargs",
+          "callee": "_is_pooled",
+          "lineNumber": 92
+        },
+        {
+          "caller": "_is_retryable",
+          "callee": "str(exc).lower",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_is_retryable",
+          "callee": "str",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_is_retryable",
+          "callee": "any",
+          "lineNumber": 97
+        },
+        {
+          "caller": "get_connection",
+          "callee": "time.monotonic",
+          "lineNumber": 115
+        },
+        {
+          "caller": "get_connection",
+          "callee": "psycopg.connect",
+          "lineNumber": 121
+        },
+        {
+          "caller": "get_connection",
+          "callee": "_clean_dsn",
+          "lineNumber": 122
+        },
+        {
+          "caller": "get_connection",
+          "callee": "os.getenv",
+          "lineNumber": 122
+        },
+        {
+          "caller": "get_connection",
+          "callee": "_pooler_kwargs",
+          "lineNumber": 123
+        },
+        {
+          "caller": "get_connection",
+          "callee": "os.getenv",
+          "lineNumber": 123
+        },
+        {
+          "caller": "get_connection",
+          "callee": "time.monotonic",
+          "lineNumber": 131
+        },
+        {
+          "caller": "get_connection",
+          "callee": "random.random",
+          "lineNumber": 136
+        },
+        {
+          "caller": "get_connection",
+          "callee": "_is_retryable",
+          "lineNumber": 139
+        },
+        {
+          "caller": "get_connection",
+          "callee": "print",
+          "lineNumber": 144
+        },
+        {
+          "caller": "get_connection",
+          "callee": "str",
+          "lineNumber": 144
+        },
+        {
+          "caller": "get_connection",
+          "callee": "time.sleep",
+          "lineNumber": 145
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "diag_assigned_days_readonly.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 76,
+      "nonEmptyLines": 66,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 15,
+          "endLine": 72,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "main",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "main",
+          "callee": "get_connection",
+          "lineNumber": 16
+        },
+        {
+          "caller": "main",
+          "callee": "conn.cursor",
+          "lineNumber": 18
+        },
+        {
+          "caller": "main",
+          "callee": "cur.execute",
+          "lineNumber": 19
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 20
+        },
+        {
+          "caller": "main",
+          "callee": "cur.fetchone",
+          "lineNumber": 20
+        },
+        {
+          "caller": "main",
+          "callee": "cur.execute",
+          "lineNumber": 23
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 32
+        },
+        {
+          "caller": "main",
+          "callee": "cur.fetchone",
+          "lineNumber": 32
+        },
+        {
+          "caller": "main",
+          "callee": "cur.execute",
+          "lineNumber": 34
+        },
+        {
+          "caller": "main",
+          "callee": "cur.fetchall",
+          "lineNumber": 48
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 49
+        },
+        {
+          "caller": "main",
+          "callee": "len",
+          "lineNumber": 49
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 51
+        },
+        {
+          "caller": "main",
+          "callee": "cur.execute",
+          "lineNumber": 54
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 55
+        },
+        {
+          "caller": "main",
+          "callee": "cur.fetchone",
+          "lineNumber": 55
+        },
+        {
+          "caller": "main",
+          "callee": "cur.execute",
+          "lineNumber": 58
+        },
+        {
+          "caller": "main",
+          "callee": "cur.fetchall",
+          "lineNumber": 67
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 68
+        },
+        {
+          "caller": "main",
+          "callee": "len",
+          "lineNumber": 68
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 70
+        },
+        {
+          "caller": "main",
+          "callee": "conn.close",
+          "lineNumber": 72
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "diag_bug2_readonly.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 142,
+      "nonEmptyLines": 132,
+      "functions": [
+        {
+          "name": "section",
+          "startLine": 14,
+          "endLine": 16,
+          "params": [
+            "t"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "section",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "section",
+          "callee": "print",
+          "lineNumber": 15
+        },
+        {
+          "caller": "section",
+          "callee": "print",
+          "lineNumber": 16
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "diag_hr.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 31,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "diag_hr2.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 29,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "diag_rbac_readonly.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 56,
+      "nonEmptyLines": 50,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "diag_route_drops_readonly.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 80,
+      "nonEmptyLines": 69,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 18,
+          "endLine": 76,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "main",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "main",
+          "callee": "get_connection",
+          "lineNumber": 19
+        },
+        {
+          "caller": "main",
+          "callee": "conn.cursor",
+          "lineNumber": 21
+        },
+        {
+          "caller": "main",
+          "callee": "cur.execute",
+          "lineNumber": 22
+        },
+        {
+          "caller": "main",
+          "callee": "cur.fetchall",
+          "lineNumber": 31
+        },
+        {
+          "caller": "main",
+          "callee": "PAT.search",
+          "lineNumber": 32
+        },
+        {
+          "caller": "main",
+          "callee": "int",
+          "lineNumber": 35
+        },
+        {
+          "caller": "main",
+          "callee": "m.group",
+          "lineNumber": 35
+        },
+        {
+          "caller": "main",
+          "callee": "int",
+          "lineNumber": 35
+        },
+        {
+          "caller": "main",
+          "callee": "m.group",
+          "lineNumber": 35
+        },
+        {
+          "caller": "main",
+          "callee": "events.append",
+          "lineNumber": 36
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 39
+        },
+        {
+          "caller": "main",
+          "callee": "len",
+          "lineNumber": 39
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 40
+        },
+        {
+          "caller": "main",
+          "callee": "len",
+          "lineNumber": 40
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 41
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 42
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 44
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 45
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 48
+        },
+        {
+          "caller": "main",
+          "callee": "len",
+          "lineNumber": 48
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 50
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 51
+        },
+        {
+          "caller": "main",
+          "callee": "cur.execute",
+          "lineNumber": 54
+        },
+        {
+          "caller": "main",
+          "callee": "cur.fetchall",
+          "lineNumber": 55
+        },
+        {
+          "caller": "main",
+          "callee": "hist.setdefault(e[2], []).append",
+          "lineNumber": 58
+        },
+        {
+          "caller": "main",
+          "callee": "hist.setdefault",
+          "lineNumber": 58
+        },
+        {
+          "caller": "main",
+          "callee": "sorted",
+          "lineNumber": 59
+        },
+        {
+          "caller": "main",
+          "callee": "hist.items",
+          "lineNumber": 59
+        },
+        {
+          "caller": "main",
+          "callee": "max",
+          "lineNumber": 60
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 61
+        },
+        {
+          "caller": "main",
+          "callee": "len",
+          "lineNumber": 61
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 64
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 66
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 67
+        },
+        {
+          "caller": "main",
+          "callee": "conn.cursor",
+          "lineNumber": 70
+        },
+        {
+          "caller": "main",
+          "callee": "cur2.execute",
+          "lineNumber": 71
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 73
+        },
+        {
+          "caller": "main",
+          "callee": "Counter",
+          "lineNumber": 73
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 74
+        },
+        {
+          "caller": "main",
+          "callee": "Counter",
+          "lineNumber": 74
+        },
+        {
+          "caller": "main",
+          "callee": "conn.close",
+          "lineNumber": 76
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "diag_route_loss_readonly.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 93,
+      "nonEmptyLines": 81,
+      "functions": [
+        {
+          "name": "q",
+          "startLine": 20,
+          "endLine": 22,
+          "params": [
+            "cur",
+            "sql",
+            "params"
+          ]
+        },
+        {
+          "name": "main",
+          "startLine": 25,
+          "endLine": 89,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "q",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 25,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "q",
+          "callee": "cur.execute",
+          "lineNumber": 21
+        },
+        {
+          "caller": "q",
+          "callee": "cur.fetchall",
+          "lineNumber": 22
+        },
+        {
+          "caller": "main",
+          "callee": "get_connection",
+          "lineNumber": 26
+        },
+        {
+          "caller": "main",
+          "callee": "conn.cursor",
+          "lineNumber": 28
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 29
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 30
+        },
+        {
+          "caller": "main",
+          "callee": "q",
+          "lineNumber": 30
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 31
+        },
+        {
+          "caller": "main",
+          "callee": "q",
+          "lineNumber": 31
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 32
+        },
+        {
+          "caller": "main",
+          "callee": "q",
+          "lineNumber": 33
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 34
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 36
+        },
+        {
+          "caller": "main",
+          "callee": "q",
+          "lineNumber": 37
+        },
+        {
+          "caller": "main",
+          "callee": "text.split(\"خط سير\")[1].split(\",\")[0].strip",
+          "lineNumber": 50
+        },
+        {
+          "caller": "main",
+          "callee": "text.split(\"خط سير\")[1].split",
+          "lineNumber": 50
+        },
+        {
+          "caller": "main",
+          "callee": "text.split",
+          "lineNumber": 50
+        },
+        {
+          "caller": "main",
+          "callee": "int",
+          "lineNumber": 51
+        },
+        {
+          "caller": "main",
+          "callee": "seg.split",
+          "lineNumber": 51
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 58
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 60
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 61
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 63
+        },
+        {
+          "caller": "main",
+          "callee": "q",
+          "lineNumber": 64
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 73
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 74
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 76
+        },
+        {
+          "caller": "main",
+          "callee": "q",
+          "lineNumber": 77
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 87
+        },
+        {
+          "caller": "main",
+          "callee": "conn.close",
+          "lineNumber": 89
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    }
+  ]
+}

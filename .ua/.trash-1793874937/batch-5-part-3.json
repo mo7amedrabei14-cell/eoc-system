@@ -1,0 +1,2977 @@
+{
+  "nodes": [
+    {
+      "id": "file:test_n1_query_optimizations.py",
+      "type": "file",
+      "name": "test_n1_query_optimizations.py",
+      "filePath": "test_n1_query_optimizations.py",
+      "summary": "Exercises query-count and batched-read/write behavior across mission, realtime, weather, catalog, and user workflows.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:tests/test_jl_weather_regressions.py",
+      "type": "file",
+      "name": "test_jl_weather_regressions.py",
+      "filePath": "tests/test_jl_weather_regressions.py",
+      "summary": "Covers join/leave event recipient behavior and normalization of mixed numeric weather-history values.",
+      "tags": [
+        "test",
+        "weather",
+        "regression"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:weather_backfill.py",
+      "type": "file",
+      "name": "weather_backfill.py",
+      "filePath": "weather_backfill.py",
+      "summary": "Fetches missing historical weather ranges, inserts new observations into PostgreSQL, verifies coverage, and reports isolated failures with bounded retry handling.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:_wait_for_schema",
+      "type": "function",
+      "name": "_wait_for_schema",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        87,
+        104
+      ],
+      "summary": "Waits until the test database schema is available.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:ok",
+      "type": "function",
+      "name": "ok",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        113,
+        120
+      ],
+      "summary": "Checks that a query result matches the expected condition.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:load_legacy_module",
+      "type": "function",
+      "name": "load_legacy_module",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        126,
+        139
+      ],
+      "summary": "Loads a legacy project module for compatibility-focused tests.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:_norm_param",
+      "type": "function",
+      "name": "_norm_param",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        155,
+        162
+      ],
+      "summary": "Normalizes SQL parameters for deterministic query-count comparisons.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:write_statements",
+      "type": "function",
+      "name": "write_statements",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        218,
+        220
+      ],
+      "summary": "Executes a sequence of SQL write statements in the test database.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:reset_db",
+      "type": "function",
+      "name": "reset_db",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        235,
+        246
+      ],
+      "summary": "Resets database state between query-optimization scenarios.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:new_mission",
+      "type": "function",
+      "name": "new_mission",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        249,
+        261
+      ],
+      "summary": "Creates mission test data.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:new_route",
+      "type": "function",
+      "name": "new_route",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        264,
+        272
+      ],
+      "summary": "Creates route test data.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:new_participant",
+      "type": "function",
+      "name": "new_participant",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        275,
+        287
+      ],
+      "summary": "Creates mission-participant test data.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:assign",
+      "type": "function",
+      "name": "assign",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        290,
+        295
+      ],
+      "summary": "Assigns a participant in a mission test scenario.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:new_session",
+      "type": "function",
+      "name": "new_session",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        298,
+        310
+      ],
+      "summary": "Creates a test session record.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:new_jl_entry",
+      "type": "function",
+      "name": "new_jl_entry",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        313,
+        319
+      ],
+      "summary": "Creates a join/leave history entry for tests.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:call_details",
+      "type": "function",
+      "name": "call_details",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        325,
+        338
+      ],
+      "summary": "Invokes the mission-details route and captures its database interactions.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:seed_details",
+      "type": "function",
+      "name": "seed_details",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        341,
+        396
+      ],
+      "summary": "Seeds the database for mission-details query tests.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_mission_details",
+      "type": "function",
+      "name": "test_mission_details",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        399,
+        428
+      ],
+      "summary": "Checks mission-details results and query behavior.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:snapshot_jl",
+      "type": "function",
+      "name": "snapshot_jl",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        434,
+        473
+      ],
+      "summary": "Captures join/leave state for before-and-after comparisons.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:run_materialize",
+      "type": "function",
+      "name": "run_materialize",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        476,
+        498
+      ],
+      "summary": "Runs the materialization operation under query instrumentation.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:seed_materialize",
+      "type": "function",
+      "name": "seed_materialize",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        501,
+        583
+      ],
+      "summary": "Creates source records for materialization tests.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_materialize",
+      "type": "function",
+      "name": "test_materialize",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        586,
+        652
+      ],
+      "summary": "Checks materialized output and its database-query behavior.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_trigger_assumptions",
+      "type": "function",
+      "name": "test_trigger_assumptions",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        655,
+        689
+      ],
+      "summary": "Checks trigger assumptions.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_identity_batch",
+      "type": "function",
+      "name": "test_identity_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        697,
+        790
+      ],
+      "summary": "Checks identity batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_notification_batch",
+      "type": "function",
+      "name": "test_notification_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        793,
+        864
+      ],
+      "summary": "Checks notification batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_recent_realtime_dedupe_window",
+      "type": "function",
+      "name": "test_recent_realtime_dedupe_window",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        868,
+        879
+      ],
+      "summary": "Checks recent realtime dedupe window.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_participant_notification_dedupe_batch",
+      "type": "function",
+      "name": "test_participant_notification_dedupe_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        882,
+        921
+      ],
+      "summary": "Checks participant notification dedupe batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_realtime_dedupe_is_recipient_scoped",
+      "type": "function",
+      "name": "test_realtime_dedupe_is_recipient_scoped",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        925,
+        995
+      ],
+      "summary": "Checks realtime dedupe is recipient scoped.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_wireless_delivery_batch",
+      "type": "function",
+      "name": "test_wireless_delivery_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        998,
+        1062
+      ],
+      "summary": "Checks wireless delivery batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_wireless_inventory_calc_batch",
+      "type": "function",
+      "name": "test_wireless_inventory_calc_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1066,
+        1104
+      ],
+      "summary": "Checks wireless inventory calc batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_end_participation_presence_batch",
+      "type": "function",
+      "name": "test_end_participation_presence_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1107,
+        1155
+      ],
+      "summary": "Checks end participation presence batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_cross_source_batch",
+      "type": "function",
+      "name": "test_cross_source_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1159,
+        1213
+      ],
+      "summary": "Checks cross source batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_cross_source_fallback_batch",
+      "type": "function",
+      "name": "test_cross_source_fallback_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1216,
+        1265
+      ],
+      "summary": "Checks cross source fallback batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_local_history_batch",
+      "type": "function",
+      "name": "test_local_history_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1268,
+        1315
+      ],
+      "summary": "Checks local history batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_catalog_baseline_batch",
+      "type": "function",
+      "name": "test_catalog_baseline_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1318,
+        1367
+      ],
+      "summary": "Checks catalog baseline batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_secondary_history_batch",
+      "type": "function",
+      "name": "test_secondary_history_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1370,
+        1424
+      ],
+      "summary": "Checks secondary history batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_world_catalog_year_window_batch",
+      "type": "function",
+      "name": "test_world_catalog_year_window_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1427,
+        1478
+      ],
+      "summary": "Checks world catalog year window batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_update_user_branches_route_batch",
+      "type": "function",
+      "name": "test_update_user_branches_route_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1481,
+        1575
+      ],
+      "summary": "Checks update user branches route batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_jl_event_preserves_creator_recipient",
+      "type": "function",
+      "name": "test_jl_event_preserves_creator_recipient",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1578,
+        1640
+      ],
+      "summary": "Checks jl event preserves creator recipient.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_weather_history_mixed_numeric_batch",
+      "type": "function",
+      "name": "test_weather_history_mixed_numeric_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1643,
+        1718
+      ],
+      "summary": "Checks weather history mixed numeric batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_batched_maintenance_writes",
+      "type": "function",
+      "name": "test_batched_maintenance_writes",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1721,
+        1839
+      ],
+      "summary": "Checks batched maintenance writes.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_end_participation_writes_batch",
+      "type": "function",
+      "name": "test_end_participation_writes_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1842,
+        1902
+      ],
+      "summary": "Checks end participation writes batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_join_leave_catalog_write_batch",
+      "type": "function",
+      "name": "test_join_leave_catalog_write_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1905,
+        1985
+      ],
+      "summary": "Checks join leave catalog write batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_mission_assignment_write_batch",
+      "type": "function",
+      "name": "test_mission_assignment_write_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        1988,
+        2051
+      ],
+      "summary": "Checks mission assignment write batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_mission_route_write_batch",
+      "type": "function",
+      "name": "test_mission_route_write_batch",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        2054,
+        2117
+      ],
+      "summary": "Checks mission route write batch.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:call_bulk",
+      "type": "function",
+      "name": "call_bulk",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        2123,
+        2142
+      ],
+      "summary": "Invokes a bulk operation and records its database interactions.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:seed_earthquakes",
+      "type": "function",
+      "name": "seed_earthquakes",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        2145,
+        2154
+      ],
+      "summary": "Seeds earthquake-catalog data for batch-insert tests.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_earthquake_catalog_batch_insert",
+      "type": "function",
+      "name": "test_earthquake_catalog_batch_insert",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        2157,
+        2273
+      ],
+      "summary": "Checks earthquake catalog batch insert.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_world_backfill_runtime_batches",
+      "type": "function",
+      "name": "test_world_backfill_runtime_batches",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        2276,
+        2362
+      ],
+      "summary": "Checks world backfill runtime batches.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:test_bulk",
+      "type": "function",
+      "name": "test_bulk",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        2365,
+        2448
+      ],
+      "summary": "Checks bulk.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_n1_query_optimizations.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        2452,
+        2505
+      ],
+      "summary": "Runs the query-optimization test suite when invoked as a script.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:test_n1_query_optimizations.py:Counter",
+      "type": "class",
+      "name": "Counter",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        145,
+        152
+      ],
+      "summary": "Tracks query counts and can reset the accumulated measurements.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:test_n1_query_optimizations.py:CountingCursor",
+      "type": "class",
+      "name": "CountingCursor",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        165,
+        184
+      ],
+      "summary": "Wraps a database cursor to record executed query operations for tests.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:test_n1_query_optimizations.py:CountingConnection",
+      "type": "class",
+      "name": "CountingConnection",
+      "filePath": "test_n1_query_optimizations.py",
+      "lineRange": [
+        187,
+        212
+      ],
+      "summary": "Wraps a database connection to instrument query counts without applying test transaction changes.",
+      "tags": [
+        "test",
+        "database",
+        "query-optimization",
+        "batching"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tests/test_jl_weather_regressions.py:_participant",
+      "type": "function",
+      "name": "_participant",
+      "filePath": "tests/test_jl_weather_regressions.py",
+      "lineRange": [
+        13,
+        19
+      ],
+      "summary": "Creates participant input for join/leave event regression tests.",
+      "tags": [
+        "test",
+        "weather",
+        "regression"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tests/test_jl_weather_regressions.py:_run_join_leave_event",
+      "type": "function",
+      "name": "_run_join_leave_event",
+      "filePath": "tests/test_jl_weather_regressions.py",
+      "lineRange": [
+        22,
+        34
+      ],
+      "summary": "Runs a join/leave event scenario against the test application.",
+      "tags": [
+        "test",
+        "weather",
+        "regression"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tests/test_jl_weather_regressions.py:test_join_leave_event_targets_creator_when_another_user_is_actor",
+      "type": "function",
+      "name": "test_join_leave_event_targets_creator_when_another_user_is_actor",
+      "filePath": "tests/test_jl_weather_regressions.py",
+      "lineRange": [
+        37,
+        40
+      ],
+      "summary": "Checks that a join/leave event targets the mission creator when another user performs the action.",
+      "tags": [
+        "test",
+        "weather",
+        "regression"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tests/test_jl_weather_regressions.py:test_join_leave_event_is_untargeted_when_creator_is_actor",
+      "type": "function",
+      "name": "test_join_leave_event_is_untargeted_when_creator_is_actor",
+      "filePath": "tests/test_jl_weather_regressions.py",
+      "lineRange": [
+        43,
+        46
+      ],
+      "summary": "Checks that creator-initiated join/leave events are not redundantly targeted.",
+      "tags": [
+        "test",
+        "weather",
+        "regression"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tests/test_jl_weather_regressions.py:test_weather_history_batch_normalizes_mixed_numeric_types_and_preserves_nulls",
+      "type": "function",
+      "name": "test_weather_history_batch_normalizes_mixed_numeric_types_and_preserves_nulls",
+      "filePath": "tests/test_jl_weather_regressions.py",
+      "lineRange": [
+        60,
+        97
+      ],
+      "summary": "Checks weather-history batching normalizes mixed numeric values without losing nulls.",
+      "tags": [
+        "test",
+        "weather",
+        "regression"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_jl_weather_regressions.py:_FakeCursor",
+      "type": "class",
+      "name": "_FakeCursor",
+      "filePath": "tests/test_jl_weather_regressions.py",
+      "lineRange": [
+        49,
+        57
+      ],
+      "summary": "Minimal cursor double for weather-history batching regression tests.",
+      "tags": [
+        "test",
+        "weather",
+        "regression"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_backfill.py:_env_int",
+      "type": "function",
+      "name": "_env_int",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        57,
+        65
+      ],
+      "summary": "Reads an integer setting with a safe default and bounds handling.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_backfill.py:_env_float",
+      "type": "function",
+      "name": "_env_float",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        68,
+        78
+      ],
+      "summary": "Reads a floating-point setting with a safe default and bounds handling.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:iso_now",
+      "type": "function",
+      "name": "iso_now",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        184,
+        185
+      ],
+      "summary": "Returns the current timestamp in ISO format.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_backfill.py:parse_api_date",
+      "type": "function",
+      "name": "parse_api_date",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        188,
+        198
+      ],
+      "summary": "Parses a date returned by the weather archive API.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:parse_retry_after",
+      "type": "function",
+      "name": "parse_retry_after",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        201,
+        221
+      ],
+      "summary": "Parses Retry-After as either a delay or an HTTP date.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:backoff_delay",
+      "type": "function",
+      "name": "backoff_delay",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        224,
+        229
+      ],
+      "summary": "Calculates a bounded exponential retry delay with jitter.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_backfill.py:sleep_with_reason",
+      "type": "function",
+      "name": "sleep_with_reason",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        232,
+        236
+      ],
+      "summary": "Waits for a retry interval while recording its reason.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_backfill.py:wait_for_global_cooldown",
+      "type": "function",
+      "name": "wait_for_global_cooldown",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        239,
+        243
+      ],
+      "summary": "Waits until the shared request cooldown has elapsed.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_backfill.py:set_global_cooldown",
+      "type": "function",
+      "name": "set_global_cooldown",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        246,
+        248
+      ],
+      "summary": "Sets the shared cooldown after a rate-limit response.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_backfill.py:http_get_json",
+      "type": "function",
+      "name": "http_get_json",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        251,
+        340
+      ],
+      "summary": "Fetches JSON with finite retries and explicit rate-limit handling.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_backfill.py:fetch_locations_pg",
+      "type": "function",
+      "name": "fetch_locations_pg",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        343,
+        371
+      ],
+      "summary": "Loads active weather locations from PostgreSQL.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:fetch_existing_state",
+      "type": "function",
+      "name": "fetch_existing_state",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        374,
+        414
+      ],
+      "summary": "Reads stored weather dates and counts before archive requests begin.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:dates_to_ranges",
+      "type": "function",
+      "name": "dates_to_ranges",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        417,
+        434
+      ],
+      "summary": "Groups dates into minimal contiguous ranges.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:split_range",
+      "type": "function",
+      "name": "split_range",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        437,
+        450
+      ],
+      "summary": "Splits a date range into API-sized chunks while preserving its dates.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:missing_ranges",
+      "type": "function",
+      "name": "missing_ranges",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        453,
+        467
+      ],
+      "summary": "Calculates missing dates in the configured historical window.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:gap_ranges_for_location",
+      "type": "function",
+      "name": "gap_ranges_for_location",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        470,
+        479
+      ],
+      "summary": "Builds API-sized date ranges for gaps at one location.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:parse_archive_payload",
+      "type": "function",
+      "name": "parse_archive_payload",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        482,
+        535
+      ],
+      "summary": "Converts a weather archive response into validated history rows.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_backfill.py:_insert_history_rows_cursor",
+      "type": "function",
+      "name": "_insert_history_rows_cursor",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        538,
+        585
+      ],
+      "summary": "Inserts new weather-history rows through a single PostgreSQL statement.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:insert_history_rows",
+      "type": "function",
+      "name": "insert_history_rows",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        588,
+        600
+      ],
+      "summary": "Persists only new weather-history rows without changing existing records.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:verify_coverage",
+      "type": "function",
+      "name": "verify_coverage",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        603,
+        660
+      ],
+      "summary": "Reads stored weather coverage after the backfill completes.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_backfill.py:record_error",
+      "type": "function",
+      "name": "record_error",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        663,
+        676
+      ],
+      "summary": "Records a failure against the affected backfill range.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:new_location_report",
+      "type": "function",
+      "name": "new_location_report",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        679,
+        699
+      ],
+      "summary": "Initializes a per-location backfill report.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:fetch_archive_range",
+      "type": "function",
+      "name": "fetch_archive_range",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        702,
+        760
+      ],
+      "summary": "Fetches and persists one missing archive range independently.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_backfill.py:write_report",
+      "type": "function",
+      "name": "write_report",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        763,
+        769
+      ],
+      "summary": "Writes the completed backfill report.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_backfill.py:summarize_reports",
+      "type": "function",
+      "name": "summarize_reports",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        772,
+        794
+      ],
+      "summary": "Aggregates per-location backfill results into a summary.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:weather_backfill.py:run_backfill",
+      "type": "function",
+      "name": "run_backfill",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        797,
+        905
+      ],
+      "summary": "Coordinates location discovery, gap fetching, insertion, verification, and reporting.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:weather_backfill.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        908,
+        914
+      ],
+      "summary": "Runs the query-optimization test suite when invoked as a script.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:weather_backfill.py:BackfillError",
+      "type": "class",
+      "name": "BackfillError",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        127,
+        128
+      ],
+      "summary": "Base exception for isolated historical-weather backfill failures.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:weather_backfill.py:ArchiveEmptyError",
+      "type": "class",
+      "name": "ArchiveEmptyError",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        131,
+        132
+      ],
+      "summary": "Signals that an archive request returned no daily observations.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:weather_backfill.py:HTTPRequestError",
+      "type": "class",
+      "name": "HTTPRequestError",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        135,
+        138
+      ],
+      "summary": "Represents a weather archive HTTP request failure.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:weather_backfill.py:RateLimitError",
+      "type": "class",
+      "name": "RateLimitError",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        141,
+        148
+      ],
+      "summary": "Represents a rate-limit response with retry timing information.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:weather_backfill.py:DateRange",
+      "type": "class",
+      "name": "DateRange",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        152,
+        164
+      ],
+      "summary": "Represents a contiguous date interval and provides duration and serialization helpers.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:weather_backfill.py:Location",
+      "type": "class",
+      "name": "Location",
+      "filePath": "weather_backfill.py",
+      "lineRange": [
+        168,
+        173
+      ],
+      "summary": "Represents a weather location processed by the backfill.",
+      "tags": [
+        "weather",
+        "data-pipeline",
+        "backfill",
+        "rate-limiting"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:_wait_for_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:_wait_for_schema",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:ok",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:ok",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:load_legacy_module",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:load_legacy_module",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:_norm_param",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:_norm_param",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:write_statements",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:write_statements",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:reset_db",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:reset_db",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_route",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_route",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_participant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_participant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:assign",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:assign",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_session",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_session",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_jl_entry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:new_jl_entry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:call_details",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:call_details",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:seed_details",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:seed_details",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_mission_details",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_mission_details",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:snapshot_jl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:snapshot_jl",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:run_materialize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:run_materialize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:seed_materialize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:seed_materialize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_materialize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_materialize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_trigger_assumptions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_trigger_assumptions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_identity_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_identity_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_notification_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_notification_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_recent_realtime_dedupe_window",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_recent_realtime_dedupe_window",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_participant_notification_dedupe_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_participant_notification_dedupe_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_realtime_dedupe_is_recipient_scoped",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_realtime_dedupe_is_recipient_scoped",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_wireless_delivery_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_wireless_delivery_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_wireless_inventory_calc_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_wireless_inventory_calc_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_end_participation_presence_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_end_participation_presence_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_cross_source_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_cross_source_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_cross_source_fallback_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_cross_source_fallback_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_local_history_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_local_history_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_catalog_baseline_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_catalog_baseline_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_secondary_history_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_secondary_history_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_world_catalog_year_window_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_world_catalog_year_window_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_update_user_branches_route_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_update_user_branches_route_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_jl_event_preserves_creator_recipient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_jl_event_preserves_creator_recipient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_weather_history_mixed_numeric_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_weather_history_mixed_numeric_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_batched_maintenance_writes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_batched_maintenance_writes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_end_participation_writes_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_end_participation_writes_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_join_leave_catalog_write_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_join_leave_catalog_write_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_mission_assignment_write_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_mission_assignment_write_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_mission_route_write_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_mission_route_write_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:call_bulk",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:call_bulk",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:seed_earthquakes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:seed_earthquakes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_earthquake_catalog_batch_insert",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_earthquake_catalog_batch_insert",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_world_backfill_runtime_batches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_world_backfill_runtime_batches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_bulk",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:test_bulk",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "function:test_n1_query_optimizations.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "class:test_n1_query_optimizations.py:Counter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "class:test_n1_query_optimizations.py:Counter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "class:test_n1_query_optimizations.py:CountingCursor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "class:test_n1_query_optimizations.py:CountingCursor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "class:test_n1_query_optimizations.py:CountingConnection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "class:test_n1_query_optimizations.py:CountingConnection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:_participant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:_participant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:_run_join_leave_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:_run_join_leave_event",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:test_join_leave_event_targets_creator_when_another_user_is_actor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:test_join_leave_event_targets_creator_when_another_user_is_actor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:test_join_leave_event_is_untargeted_when_creator_is_actor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:test_join_leave_event_is_untargeted_when_creator_is_actor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:test_weather_history_batch_normalizes_mixed_numeric_types_and_preserves_nulls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "function:tests/test_jl_weather_regressions.py:test_weather_history_batch_normalizes_mixed_numeric_types_and_preserves_nulls",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "class:tests/test_jl_weather_regressions.py:_FakeCursor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "class:tests/test_jl_weather_regressions.py:_FakeCursor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:_env_int",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:_env_int",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:_env_float",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:_env_float",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:iso_now",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:iso_now",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:parse_api_date",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:parse_api_date",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:parse_retry_after",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:parse_retry_after",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:backoff_delay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:backoff_delay",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:sleep_with_reason",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:sleep_with_reason",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:wait_for_global_cooldown",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:wait_for_global_cooldown",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:set_global_cooldown",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:set_global_cooldown",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:http_get_json",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:http_get_json",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:fetch_locations_pg",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:fetch_locations_pg",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:fetch_existing_state",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:fetch_existing_state",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:dates_to_ranges",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:dates_to_ranges",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:split_range",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:split_range",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:missing_ranges",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:missing_ranges",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:gap_ranges_for_location",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:gap_ranges_for_location",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:parse_archive_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:parse_archive_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:_insert_history_rows_cursor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:_insert_history_rows_cursor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:insert_history_rows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:insert_history_rows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:verify_coverage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:verify_coverage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:record_error",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:record_error",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:new_location_report",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:new_location_report",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:fetch_archive_range",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:fetch_archive_range",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:write_report",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:write_report",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:summarize_reports",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:summarize_reports",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:run_backfill",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:run_backfill",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "function:weather_backfill.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:BackfillError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:BackfillError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:ArchiveEmptyError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:ArchiveEmptyError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:HTTPRequestError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:HTTPRequestError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:RateLimitError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:RateLimitError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:DateRange",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:DateRange",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:Location",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weather_backfill.py",
+      "target": "class:weather_backfill.py:Location",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "file:backfill_world_catalog.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "file:fix_emsc_links.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "file:realtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_n1_query_optimizations.py",
+      "target": "file:weather_backfill.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_jl_weather_regressions.py",
+      "target": "file:weather_backfill.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

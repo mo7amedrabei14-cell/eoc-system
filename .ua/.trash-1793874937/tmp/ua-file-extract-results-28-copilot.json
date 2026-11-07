@@ -1,0 +1,44 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 0,
+  "filesSkipped": [
+    "_shot_profile/Default/Code Cache/js/ff5355fa105f8347_0",
+    "_shot_profile/Default/Code Cache/js/index",
+    "_shot_profile/Default/Code Cache/js/index-dir/the-real-index",
+    "_shot_profile/Default/Code Cache/wasm/index",
+    "_shot_profile/Default/Code Cache/wasm/index-dir/the-real-index",
+    "_shot_profile/Default/DIPS",
+    "_shot_profile/Default/DIPS-wal",
+    "_shot_profile/Default/DawnGraphiteCache/data_0",
+    "_shot_profile/Default/DawnGraphiteCache/data_1",
+    "_shot_profile/Default/DawnGraphiteCache/data_2",
+    "_shot_profile/Default/DawnGraphiteCache/data_3",
+    "_shot_profile/Default/DawnGraphiteCache/index",
+    "_shot_profile/Default/DawnWebGPUCache/data_0",
+    "_shot_profile/Default/DawnWebGPUCache/data_1",
+    "_shot_profile/Default/DawnWebGPUCache/data_2",
+    "_shot_profile/Default/DawnWebGPUCache/data_3",
+    "_shot_profile/Default/DawnWebGPUCache/index",
+    "_shot_profile/Default/GPUCache/data_0",
+    "_shot_profile/Default/GPUCache/data_1",
+    "_shot_profile/Default/GPUCache/data_2",
+    "_shot_profile/Default/GPUCache/data_3",
+    "_shot_profile/Default/GPUCache/index",
+    "_shot_profile/Default/Local Storage/leveldb/CURRENT",
+    "_shot_profile/Default/Local Storage/leveldb/LOCK",
+    "_shot_profile/Default/Local Storage/leveldb/LOG"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 0,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": []
+}

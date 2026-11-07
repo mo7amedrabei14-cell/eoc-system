@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    {
+      "id": "config:frontend/_unz__flat/xl/metadata.xml",
+      "type": "config",
+      "name": "metadata.xml",
+      "filePath": "frontend/_unz__flat/xl/metadata.xml",
+      "summary": "Spreadsheet package metadata describing metadata types and cell-metadata records, including extension metadata for dynamic-array behavior.",
+      "tags": ["configuration", "spreadsheet", "metadata", "openxml"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__flat/xl/styles.xml",
+      "type": "config",
+      "name": "styles.xml",
+      "filePath": "frontend/_unz__flat/xl/styles.xml",
+      "summary": "Spreadsheet style definitions for fonts, fills, borders, number formats, and cell styles.",
+      "tags": ["configuration", "spreadsheet", "styles", "openxml"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__flat/xl/workbook.xml",
+      "type": "config",
+      "name": "workbook.xml",
+      "filePath": "frontend/_unz__flat/xl/workbook.xml",
+      "summary": "Workbook-level properties and sheet declarations for the spreadsheet package.",
+      "tags": ["configuration", "spreadsheet", "workbook", "openxml"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

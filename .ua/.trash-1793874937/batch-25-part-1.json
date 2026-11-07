@@ -1,0 +1,1758 @@
+{
+  "nodes": [
+    {
+      "id": "file:_drive_crash.mjs",
+      "type": "file",
+      "name": "_drive_crash.mjs",
+      "filePath": "_drive_crash.mjs",
+      "summary": "Browser automation helper that connects to the local browser debugging interface and coordinates page-side commands through its protocol.",
+      "tags": [
+        "browser-automation",
+        "debug-protocol",
+        "runtime-script"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_drive_crash.mjs:makeRPC",
+      "type": "function",
+      "name": "makeRPC",
+      "filePath": "_drive_crash.mjs",
+      "lineRange": [
+        28,
+        49
+      ],
+      "summary": "Provides make rpc behavior for dashboard workflows.",
+      "tags": [
+        "utility",
+        "dashboard-logic",
+        "dashboard-logic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_drive_crash.mjs:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "_drive_crash.mjs",
+      "lineRange": [
+        62,
+        183
+      ],
+      "summary": "Provides main behavior for dashboard workflows.",
+      "tags": [
+        "utility",
+        "dashboard-logic",
+        "dashboard-logic"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:_head_dash.jsx",
+      "type": "file",
+      "name": "_head_dash.jsx",
+      "filePath": "_head_dash.jsx",
+      "summary": "Large React application module that renders the emergency-operations dashboard, including mission, inventory, handover, weather, incident, contact, news, audit, and staffing views.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "emergency-coordination",
+        "monitoring",
+        "data-export"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:missionClosedDay",
+      "type": "function",
+      "name": "missionClosedDay",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        73,
+        85
+      ],
+      "summary": "Determines whether a mission date falls on a configured closed day.",
+      "tags": [
+        "utility",
+        "mission-scheduling",
+        "date-logic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:missionDayNumber",
+      "type": "function",
+      "name": "missionDayNumber",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        89,
+        102
+      ],
+      "summary": "Calculates the mission day number relative to a supplied reference date.",
+      "tags": [
+        "utility",
+        "mission-scheduling",
+        "date-logic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:getBrowserStorages",
+      "type": "function",
+      "name": "getBrowserStorages",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        109,
+        120
+      ],
+      "summary": "Collects browser storage interfaces used during dashboard initialization.",
+      "tags": [
+        "utility",
+        "browser-storage",
+        "session-state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:getStoredAccessToken",
+      "type": "function",
+      "name": "getStoredAccessToken",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        122,
+        132
+      ],
+      "summary": "Looks up the dashboard?s persisted session marker for authenticated UI requests.",
+      "tags": [
+        "utility",
+        "browser-storage",
+        "session-state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:getStoredAuth",
+      "type": "function",
+      "name": "getStoredAuth",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        134,
+        149
+      ],
+      "summary": "Collects persisted session metadata used to initialize authenticated dashboard state.",
+      "tags": [
+        "utility",
+        "browser-storage",
+        "session-state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:clearStoredAuth",
+      "type": "function",
+      "name": "clearStoredAuth",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        151,
+        160
+      ],
+      "summary": "Removes persisted dashboard session metadata when the session is reset.",
+      "tags": [
+        "utility",
+        "browser-storage",
+        "session-state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:getRoleFlags",
+      "type": "function",
+      "name": "getRoleFlags",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        169,
+        179
+      ],
+      "summary": "Derives role-based display flags from the current user role.",
+      "tags": [
+        "utility",
+        "access-control",
+        "role-state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:getEnglishRegionName",
+      "type": "function",
+      "name": "getEnglishRegionName",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        940,
+        954
+      ],
+      "summary": "Normalizes a region name to its English display form.",
+      "tags": [
+        "utility",
+        "localization",
+        "region-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:translateGeneratedUiText",
+      "type": "function",
+      "name": "translateGeneratedUiText",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        956,
+        981
+      ],
+      "summary": "Translates generated interface text using the dashboard localization rules.",
+      "tags": [
+        "utility",
+        "localization",
+        "text-processing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:getEnglishUiText",
+      "type": "function",
+      "name": "getEnglishUiText",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        983,
+        1010
+      ],
+      "summary": "Converts known interface labels to their English display text.",
+      "tags": [
+        "utility",
+        "localization",
+        "text-processing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:localizeActionSuffix",
+      "type": "function",
+      "name": "localizeActionSuffix",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1014,
+        1052
+      ],
+      "summary": "Localizes action-label suffixes used in mission and dashboard controls.",
+      "tags": [
+        "utility",
+        "localization",
+        "mission-workflows"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:localizeMissionDetails",
+      "type": "function",
+      "name": "localizeMissionDetails",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1055,
+        1071
+      ],
+      "summary": "Localizes mission detail text while preserving its structured content.",
+      "tags": [
+        "utility",
+        "localization",
+        "mission-workflows"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:localizeDashboardDom",
+      "type": "function",
+      "name": "localizeDashboardDom",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1078,
+        1110
+      ],
+      "summary": "Updates dashboard DOM text and selected-option labels for the active language.",
+      "tags": [
+        "utility",
+        "localization",
+        "dom-processing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:format12H",
+      "type": "function",
+      "name": "format12H",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1124,
+        1134
+      ],
+      "summary": "Formats a time value for 12-hour clock display.",
+      "tags": [
+        "utility",
+        "date-time",
+        "formatting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:durHMS",
+      "type": "function",
+      "name": "durHMS",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1145,
+        1155
+      ],
+      "summary": "Formats a duration as hours, minutes, and seconds.",
+      "tags": [
+        "utility",
+        "date-time",
+        "formatting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:buildNewsRow",
+      "type": "function",
+      "name": "buildNewsRow",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1181,
+        1220
+      ],
+      "summary": "Builds a display row for a local news item.",
+      "tags": [
+        "utility",
+        "news",
+        "data-presentation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:useAnimatedNumber",
+      "type": "function",
+      "name": "useAnimatedNumber",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1252,
+        1272
+      ],
+      "summary": "Animates a numeric value as it changes in the dashboard.",
+      "tags": [
+        "react-hook",
+        "animation",
+        "dashboard"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:Magnetic",
+      "type": "function",
+      "name": "Magnetic",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1274,
+        1302
+      ],
+      "summary": "Adds pointer-responsive motion to an interactive dashboard element.",
+      "tags": [
+        "react-component",
+        "animation",
+        "interaction"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:HoursCell",
+      "type": "function",
+      "name": "HoursCell",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1310,
+        1342
+      ],
+      "summary": "Renders a compact hours value cell for operational tables.",
+      "tags": [
+        "react-component",
+        "table",
+        "data-presentation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:deliverFile",
+      "type": "function",
+      "name": "deliverFile",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1416,
+        1438
+      ],
+      "summary": "Creates a browser download from a generated file blob.",
+      "tags": [
+        "utility",
+        "file-export",
+        "browser-download"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:_exportWorkbookImpl",
+      "type": "function",
+      "name": "_exportWorkbookImpl",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1440,
+        1505
+      ],
+      "summary": "Builds and exports a spreadsheet workbook from supplied sheets.",
+      "tags": [
+        "utility",
+        "spreadsheet",
+        "file-export"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:buildWorkbookBufferZip",
+      "type": "function",
+      "name": "buildWorkbookBufferZip",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1522,
+        1577
+      ],
+      "summary": "Packages workbook data into a ZIP-compatible buffer.",
+      "tags": [
+        "utility",
+        "archive",
+        "spreadsheet"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:downloadZipFile",
+      "type": "function",
+      "name": "downloadZipFile",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1580,
+        1597
+      ],
+      "summary": "Packages generated files and starts a browser download.",
+      "tags": [
+        "utility",
+        "archive",
+        "browser-download"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:fmtHours",
+      "type": "function",
+      "name": "fmtHours",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1602,
+        1612
+      ],
+      "summary": "Formats an hour quantity for dashboard display.",
+      "tags": [
+        "utility",
+        "time-formatting",
+        "data-presentation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:Dashboard",
+      "type": "function",
+      "name": "Dashboard",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        1614,
+        3314
+      ],
+      "summary": "Composes the emergency-operations dashboard shell, navigation, and role-aware views.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "operations-dashboard"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:CountUp",
+      "type": "function",
+      "name": "CountUp",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        3321,
+        3344
+      ],
+      "summary": "Renders a numeric dashboard value with an animated count-up transition.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "metrics"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:TiltCard",
+      "type": "function",
+      "name": "TiltCard",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        3348,
+        3374
+      ],
+      "summary": "Renders a dashboard card with pointer-responsive tilt behavior.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "dashboard-cards"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:HomeView",
+      "type": "function",
+      "name": "HomeView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        3376,
+        3918
+      ],
+      "summary": "Renders the dashboard home view and its operational summary panels.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "operations-summary"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:BranchesAndInventoryView",
+      "type": "function",
+      "name": "BranchesAndInventoryView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        3920,
+        4080
+      ],
+      "summary": "Presents branch and inventory information for operational monitoring.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "inventory"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:useSmartPoll",
+      "type": "function",
+      "name": "useSmartPoll",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        4091,
+        4113
+      ],
+      "summary": "Runs a callback on a managed polling interval for live dashboard data.",
+      "tags": [
+        "react-hook",
+        "polling",
+        "live-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:PowerBiView",
+      "type": "function",
+      "name": "PowerBiView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        4117,
+        4198
+      ],
+      "summary": "Embeds the configured business-intelligence view in the dashboard.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "business-intelligence"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:MissionsView",
+      "type": "function",
+      "name": "MissionsView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        4205,
+        7936
+      ],
+      "summary": "Provides the mission operations interface for reviewing and managing mission records.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "mission-management"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:FormGroup",
+      "type": "function",
+      "name": "FormGroup",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        7939,
+        7953
+      ],
+      "summary": "Renders a labeled form group for dashboard input controls.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "forms"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:DateInput",
+      "type": "function",
+      "name": "DateInput",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        7964,
+        8225
+      ],
+      "summary": "Renders and manages a date-entry control used by dashboard forms.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "forms"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:RouteCard",
+      "type": "function",
+      "name": "RouteCard",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        8248,
+        8361
+      ],
+      "summary": "Presents a route and its associated operational details in a dashboard card.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "routing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:NavItem",
+      "type": "function",
+      "name": "NavItem",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        8364,
+        8375
+      ],
+      "summary": "Renders a dashboard navigation item and its active state.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "navigation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:TableLoadingRow",
+      "type": "function",
+      "name": "TableLoadingRow",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        8377,
+        8388
+      ],
+      "summary": "Renders a loading placeholder row for operational tables.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "tables"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:CheckIcon",
+      "type": "function",
+      "name": "CheckIcon",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        8412,
+        8427
+      ],
+      "summary": "Renders the checkmark glyph used to indicate a completed or valid state.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "status-indicators"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:AuditLogsView",
+      "type": "function",
+      "name": "AuditLogsView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        8435,
+        8617
+      ],
+      "summary": "Presents the audit log view for reviewing recorded dashboard activity.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "audit-logs"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:LocalNewsView",
+      "type": "function",
+      "name": "LocalNewsView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        8622,
+        9185
+      ],
+      "summary": "Presents local news items in the operations dashboard.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "local-news"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:cairoShiftNow",
+      "type": "function",
+      "name": "cairoShiftNow",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        9251,
+        9261
+      ],
+      "summary": "Calculates the current time used for Cairo-based shift scheduling.",
+      "tags": [
+        "utility",
+        "shift-scheduling",
+        "date-time"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:WeatherShiftWarning",
+      "type": "function",
+      "name": "WeatherShiftWarning",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        9269,
+        9309
+      ],
+      "summary": "Renders a warning when weather conditions affect shift operations.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "weather-alerts"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:WeatherForecastView",
+      "type": "function",
+      "name": "WeatherForecastView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        9312,
+        10314
+      ],
+      "summary": "Presents weather forecasts and related operational context.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "weather-forecast"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:GovernorateContactsView",
+      "type": "function",
+      "name": "GovernorateContactsView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        10323,
+        10897
+      ],
+      "summary": "Presents governorate contact and shift information for coordination.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "coordination-contacts"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:govTimeLabel",
+      "type": "function",
+      "name": "govTimeLabel",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        10915,
+        10924
+      ],
+      "summary": "Formats a local-time label for governorate shift information.",
+      "tags": [
+        "utility",
+        "shift-scheduling",
+        "date-time"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:normalizeShiftMatrix",
+      "type": "function",
+      "name": "normalizeShiftMatrix",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        10955,
+        10967
+      ],
+      "summary": "Normalizes shift data into the matrix structure used by handover workflows.",
+      "tags": [
+        "utility",
+        "shift-handover",
+        "data-normalization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:HandoverView",
+      "type": "function",
+      "name": "HandoverView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        10974,
+        11613
+      ],
+      "summary": "Provides the shift handover interface for operational notes and status transfer.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "shift-handover"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:GlobalDisastersView",
+      "type": "function",
+      "name": "GlobalDisastersView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        11618,
+        12056
+      ],
+      "summary": "Presents global disaster information for situational awareness.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "disaster-monitoring"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:EqIntelView",
+      "type": "function",
+      "name": "EqIntelView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        12063,
+        12842
+      ],
+      "summary": "Presents earthquake intelligence and related monitoring information.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "earthquake-monitoring"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:EarthquakesView",
+      "type": "function",
+      "name": "EarthquakesView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        12844,
+        13410
+      ],
+      "summary": "Presents earthquake events and their operational details.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "earthquake-monitoring"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:WeatherIntelView",
+      "type": "function",
+      "name": "WeatherIntelView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        13415,
+        14633
+      ],
+      "summary": "Presents weather intelligence, alerts, and forecast context for operations.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "weather-monitoring"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:AINewsMonitorView",
+      "type": "function",
+      "name": "AINewsMonitorView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        14662,
+        15280
+      ],
+      "summary": "Presents the AI-assisted news monitoring view for situational awareness.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "news-monitoring"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_head_dash.jsx:ApertureDialog",
+      "type": "function",
+      "name": "ApertureDialog",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15285,
+        15366
+      ],
+      "summary": "Renders a reusable dialog surface for dashboard workflows.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "dialogs"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:ExportChoiceModal",
+      "type": "function",
+      "name": "ExportChoiceModal",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15369,
+        15411
+      ],
+      "summary": "Prompts the user to choose an export format or destination.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "file-export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:DownloadConfirmModal",
+      "type": "function",
+      "name": "DownloadConfirmModal",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15414,
+        15438
+      ],
+      "summary": "Confirms a pending dashboard download action.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "file-export"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:DangerConfirmModal",
+      "type": "function",
+      "name": "DangerConfirmModal",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15441,
+        15483
+      ],
+      "summary": "Confirms a potentially destructive dashboard action before it proceeds.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "confirmation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:LiveGlyph",
+      "type": "function",
+      "name": "LiveGlyph",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15488,
+        15538
+      ],
+      "summary": "Renders a live-status glyph for dashboard indicators.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "status-indicators"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:SignalNote",
+      "type": "function",
+      "name": "SignalNote",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15558,
+        15640
+      ],
+      "summary": "Renders a compact signal or status note in the dashboard.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "status-indicators"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:WorkingToast",
+      "type": "function",
+      "name": "WorkingToast",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15645,
+        15668
+      ],
+      "summary": "Renders transient working-status feedback during dashboard operations.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "notifications"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_head_dash.jsx:ActionToast",
+      "type": "function",
+      "name": "ActionToast",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15670,
+        15758
+      ],
+      "summary": "Displays operation-result notifications and relevant follow-up actions.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "notifications"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_head_dash.jsx:HumanResourcesView",
+      "type": "function",
+      "name": "HumanResourcesView",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        15767,
+        15997
+      ],
+      "summary": "Presents staffing and human-resources information for operations coordination.",
+      "tags": [
+        "react-component",
+        "operations-dashboard",
+        "staffing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:_head_dash.jsx:WeatherIntelErrorBoundary",
+      "type": "class",
+      "name": "WeatherIntelErrorBoundary",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        201,
+        223
+      ],
+      "summary": "Provides React error-boundary handling for failures in the weather intelligence interface.",
+      "tags": [
+        "react-class",
+        "error-handling",
+        "dashboard-ui"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:_head_dash.jsx:AppErrorBoundary",
+      "type": "class",
+      "name": "AppErrorBoundary",
+      "filePath": "_head_dash.jsx",
+      "lineRange": [
+        16000,
+        16023
+      ],
+      "summary": "Provides React error-boundary handling for failures in the application interface.",
+      "tags": [
+        "react-class",
+        "error-handling",
+        "dashboard-ui"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/data_0",
+      "type": "file",
+      "name": "data_0",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/data_0",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/data_1",
+      "type": "file",
+      "name": "data_1",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/data_1",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/data_2",
+      "type": "file",
+      "name": "data_2",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/data_2",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/data_3",
+      "type": "file",
+      "name": "data_3",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/data_3",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000001",
+      "type": "file",
+      "name": "f_000001",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000001",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000002",
+      "type": "file",
+      "name": "f_000002",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000002",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000003",
+      "type": "file",
+      "name": "f_000003",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000003",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000004",
+      "type": "file",
+      "name": "f_000004",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000004",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000005",
+      "type": "file",
+      "name": "f_000005",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000005",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000006",
+      "type": "file",
+      "name": "f_000006",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000006",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000007",
+      "type": "file",
+      "name": "f_000007",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000007",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:_drive_crash.mjs",
+      "target": "function:_drive_crash.mjs:makeRPC",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_drive_crash.mjs",
+      "target": "function:_drive_crash.mjs:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:missionClosedDay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:missionDayNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:getBrowserStorages",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:getStoredAccessToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:getStoredAuth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:clearStoredAuth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:getRoleFlags",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:getEnglishRegionName",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:translateGeneratedUiText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:getEnglishUiText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:localizeActionSuffix",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:localizeMissionDetails",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:localizeDashboardDom",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:format12H",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:durHMS",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:buildNewsRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:useAnimatedNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:Magnetic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:HoursCell",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:deliverFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:_exportWorkbookImpl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:buildWorkbookBufferZip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:downloadZipFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:fmtHours",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:Dashboard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:Dashboard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:CountUp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:TiltCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:HomeView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:BranchesAndInventoryView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:useSmartPoll",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:PowerBiView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:MissionsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:FormGroup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:DateInput",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:RouteCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:NavItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:TableLoadingRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:CheckIcon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:AuditLogsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:LocalNewsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:cairoShiftNow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:WeatherShiftWarning",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:WeatherForecastView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:GovernorateContactsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:govTimeLabel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:normalizeShiftMatrix",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:HandoverView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:GlobalDisastersView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:EqIntelView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:EarthquakesView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:WeatherIntelView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:AINewsMonitorView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:ApertureDialog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:ExportChoiceModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:DownloadConfirmModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:DangerConfirmModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:LiveGlyph",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:SignalNote",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:WorkingToast",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:WorkingToast",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:ActionToast",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "function:_head_dash.jsx:HumanResourcesView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "class:_head_dash.jsx:WeatherIntelErrorBoundary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "class:_head_dash.jsx:AppErrorBoundary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_head_dash.jsx",
+      "target": "class:_head_dash.jsx:AppErrorBoundary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

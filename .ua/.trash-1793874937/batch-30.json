@@ -1,0 +1,1076 @@
+{
+  "nodes": [
+    {
+      "id": "file:after.jsx",
+      "type": "file",
+      "name": "after.jsx",
+      "filePath": "after.jsx",
+      "summary": "Implements a large React operations dashboard with views for local news, global disasters, earthquakes, AI news monitoring, and human resources.",
+      "tags": [
+        "react",
+        "dashboard",
+        "disaster-response",
+        "monitoring",
+        "ui"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apply_migration.py",
+      "type": "file",
+      "name": "apply_migration.py",
+      "filePath": "apply_migration.py",
+      "summary": "Provides a command-line entry point for applying a database migration.",
+      "tags": [
+        "database",
+        "migration",
+        "maintenance",
+        "python",
+        "script"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:before.jsx",
+      "type": "file",
+      "name": "before.jsx",
+      "filePath": "before.jsx",
+      "summary": "Implements the operations dashboard shell and major workflows, including home, branch inventory, missions, audit logs, and localized UI text.",
+      "tags": [
+        "react",
+        "dashboard",
+        "operations",
+        "missions",
+        "ui"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:check_mission_routes.py",
+      "type": "file",
+      "name": "check_mission_routes.py",
+      "filePath": "check_mission_routes.py",
+      "summary": "Provides a focused check of mission-related application routes.",
+      "tags": [
+        "testing",
+        "routes",
+        "missions",
+        "diagnostics",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:check_mission_tables.py",
+      "type": "file",
+      "name": "check_mission_tables.py",
+      "filePath": "check_mission_tables.py",
+      "summary": "Checks database tables and schema used by mission workflows.",
+      "tags": [
+        "database",
+        "schema",
+        "missions",
+        "diagnostics",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:check_syntax.py",
+      "type": "file",
+      "name": "check_syntax.py",
+      "filePath": "check_syntax.py",
+      "summary": "Runs a syntax validation check for project source files.",
+      "tags": [
+        "validation",
+        "syntax-check",
+        "diagnostics",
+        "python",
+        "build-system"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cleanup_stale_return_status.py",
+      "type": "file",
+      "name": "cleanup_stale_return_status.py",
+      "filePath": "cleanup_stale_return_status.py",
+      "summary": "Runs a guarded database cleanup for stale return-status records and imports the application module used by its cleanup workflow.",
+      "tags": [
+        "database",
+        "maintenance",
+        "data-cleanup",
+        "status-management",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:create_idempotency_table.py",
+      "type": "file",
+      "name": "create_idempotency_table.py",
+      "filePath": "create_idempotency_table.py",
+      "summary": "Creates the database table used to persist idempotency records.",
+      "tags": [
+        "database",
+        "schema",
+        "migration",
+        "idempotency",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:design-delivery/css-snippets/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "design-delivery/css-snippets/README.md",
+      "summary": "Documents reusable CSS snippets for the design-delivery area.",
+      "tags": [
+        "documentation",
+        "css",
+        "design-system",
+        "frontend",
+        "snippets"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:diag_ai_models.py",
+      "type": "file",
+      "name": "diag_ai_models.py",
+      "filePath": "diag_ai_models.py",
+      "summary": "Provides diagnostics for the application?s AI model configuration and availability.",
+      "tags": [
+        "diagnostics",
+        "ai-models",
+        "configuration",
+        "python",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:diag_route_authz.py",
+      "type": "file",
+      "name": "diag_route_authz.py",
+      "filePath": "diag_route_authz.py",
+      "summary": "Analyzes application route definitions and authorization-related call patterns for diagnostics.",
+      "tags": [
+        "diagnostics",
+        "authorization",
+        "routes",
+        "static-analysis",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:diag_secret_strength.py",
+      "type": "file",
+      "name": "diag_secret_strength.py",
+      "filePath": "diag_secret_strength.py",
+      "summary": "Reports a non-secret assessment of configured secret strength without exposing secret values.",
+      "tags": [
+        "security",
+        "configuration",
+        "diagnostics",
+        "python",
+        "secret-management"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:earthquake_intel.py",
+      "type": "file",
+      "name": "earthquake_intel.py",
+      "filePath": "earthquake_intel.py",
+      "summary": "Runs a single earthquake-intelligence processing cycle.",
+      "tags": [
+        "earthquake",
+        "data-ingestion",
+        "monitoring",
+        "python",
+        "automation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:files/Eoc System.docx",
+      "type": "file",
+      "name": "Eoc System.docx",
+      "filePath": "files/Eoc System.docx",
+      "summary": "Office document artifact; the bundled structural extractor does not parse this binary format, so no document contents are summarized.",
+      "tags": [
+        "documentation",
+        "office-document",
+        "unparsed"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:frontend/.perf/baseline.json",
+      "type": "config",
+      "name": "baseline.json",
+      "filePath": "frontend/.perf/baseline.json",
+      "summary": "Stores frontend performance baseline measurements for comparison with later runs.",
+      "tags": [
+        "performance",
+        "baseline",
+        "frontend",
+        "configuration",
+        "metrics"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__flat/[Content_Types].xml",
+      "type": "config",
+      "name": "[Content_Types].xml",
+      "filePath": "frontend/_unz__flat/[Content_Types].xml",
+      "summary": "Contains XML package content-type declarations for a spreadsheet artifact; structural extraction is unsupported.",
+      "tags": [
+        "configuration",
+        "spreadsheet",
+        "metadata",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/_unz__flat/_rels/.rels",
+      "type": "file",
+      "name": ".rels",
+      "filePath": "frontend/_unz__flat/_rels/.rels",
+      "summary": "Contains package-level XML relationships for a spreadsheet artifact; structural extraction is unsupported.",
+      "tags": [
+        "spreadsheet",
+        "relationships",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__flat/docProps/app.xml",
+      "type": "config",
+      "name": "app.xml",
+      "filePath": "frontend/_unz__flat/docProps/app.xml",
+      "summary": "Contains application-level document properties for a spreadsheet artifact; values are intentionally not summarized.",
+      "tags": [
+        "configuration",
+        "spreadsheet",
+        "metadata",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__flat/docProps/core.xml",
+      "type": "config",
+      "name": "core.xml",
+      "filePath": "frontend/_unz__flat/docProps/core.xml",
+      "summary": "Contains core document properties for a spreadsheet artifact; values are intentionally not summarized.",
+      "tags": [
+        "configuration",
+        "spreadsheet",
+        "metadata",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/_unz__flat/xl/_rels/workbook.xml.rels",
+      "type": "file",
+      "name": "workbook.xml.rels",
+      "filePath": "frontend/_unz__flat/xl/_rels/workbook.xml.rels",
+      "summary": "Contains workbook relationship metadata for a spreadsheet artifact; structural extraction is unsupported.",
+      "tags": [
+        "spreadsheet",
+        "relationships",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__flat/xl/theme/theme1.xml",
+      "type": "config",
+      "name": "theme1.xml",
+      "filePath": "frontend/_unz__flat/xl/theme/theme1.xml",
+      "summary": "Contains theme configuration metadata for a spreadsheet artifact; structural extraction is unsupported.",
+      "tags": [
+        "configuration",
+        "spreadsheet",
+        "theme",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__flat/xl/worksheets/sheet1.xml",
+      "type": "config",
+      "name": "sheet1.xml",
+      "filePath": "frontend/_unz__flat/xl/worksheets/sheet1.xml",
+      "summary": "Contains spreadsheet worksheet data; record values are intentionally not summarized.",
+      "tags": [
+        "spreadsheet",
+        "worksheet",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__s/[Content_Types].xml",
+      "type": "config",
+      "name": "[Content_Types].xml",
+      "filePath": "frontend/_unz__s/[Content_Types].xml",
+      "summary": "Contains XML package content-type declarations for a spreadsheet artifact; structural extraction is unsupported.",
+      "tags": [
+        "configuration",
+        "spreadsheet",
+        "metadata",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/_unz__s/_rels/.rels",
+      "type": "file",
+      "name": ".rels",
+      "filePath": "frontend/_unz__s/_rels/.rels",
+      "summary": "Contains package-level XML relationships for a spreadsheet artifact; structural extraction is unsupported.",
+      "tags": [
+        "spreadsheet",
+        "relationships",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:frontend/_unz__s/docProps/app.xml",
+      "type": "config",
+      "name": "app.xml",
+      "filePath": "frontend/_unz__s/docProps/app.xml",
+      "summary": "Contains application-level document properties for a spreadsheet artifact; values are intentionally not summarized.",
+      "tags": [
+        "configuration",
+        "spreadsheet",
+        "metadata",
+        "xml",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:after.jsx:LocalNewsView",
+      "type": "function",
+      "name": "LocalNewsView",
+      "filePath": "after.jsx",
+      "lineRange": [
+        1,
+        362
+      ],
+      "summary": "Renders and manages the local-news section of the operations dashboard.",
+      "tags": [
+        "component",
+        "local-news",
+        "dashboard"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:after.jsx:GlobalDisastersView",
+      "type": "function",
+      "name": "GlobalDisastersView",
+      "filePath": "after.jsx",
+      "lineRange": [
+        367,
+        717
+      ],
+      "summary": "Renders the global-disaster monitoring and management view.",
+      "tags": [
+        "component",
+        "disaster-response",
+        "monitoring"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:after.jsx:EarthquakesView",
+      "type": "function",
+      "name": "EarthquakesView",
+      "filePath": "after.jsx",
+      "lineRange": [
+        720,
+        1172
+      ],
+      "summary": "Renders the earthquake monitoring view and its related dashboard interactions.",
+      "tags": [
+        "component",
+        "earthquake",
+        "monitoring"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:after.jsx:AINewsMonitorView",
+      "type": "function",
+      "name": "AINewsMonitorView",
+      "filePath": "after.jsx",
+      "lineRange": [
+        1197,
+        1735
+      ],
+      "summary": "Renders the AI-assisted news monitoring interface.",
+      "tags": [
+        "component",
+        "ai-monitoring",
+        "news"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:after.jsx:DangerConfirmModal",
+      "type": "function",
+      "name": "DangerConfirmModal",
+      "filePath": "after.jsx",
+      "lineRange": [
+        1738,
+        1815
+      ],
+      "summary": "Presents a confirmation dialog before a high-impact dashboard action.",
+      "tags": [
+        "component",
+        "confirmation",
+        "safety"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:after.jsx:HumanResourcesView",
+      "type": "function",
+      "name": "HumanResourcesView",
+      "filePath": "after.jsx",
+      "lineRange": [
+        1823,
+        1952
+      ],
+      "summary": "Renders the human-resources administration section.",
+      "tags": [
+        "component",
+        "human-resources",
+        "administration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apply_migration.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "apply_migration.py",
+      "lineRange": [
+        7,
+        24
+      ],
+      "summary": "Coordinates the migration command entry point.",
+      "tags": [
+        "entry-point",
+        "migration",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:before.jsx:getEnglishRegionName",
+      "type": "function",
+      "name": "getEnglishRegionName",
+      "filePath": "before.jsx",
+      "lineRange": [
+        644,
+        658
+      ],
+      "summary": "Maps a region label to its English display name.",
+      "tags": [
+        "localization",
+        "utility",
+        "region"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:before.jsx:translateGeneratedUiText",
+      "type": "function",
+      "name": "translateGeneratedUiText",
+      "filePath": "before.jsx",
+      "lineRange": [
+        660,
+        685
+      ],
+      "summary": "Translates generated interface text for localized dashboard display.",
+      "tags": [
+        "localization",
+        "translation",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:before.jsx:getEnglishUiText",
+      "type": "function",
+      "name": "getEnglishUiText",
+      "filePath": "before.jsx",
+      "lineRange": [
+        687,
+        708
+      ],
+      "summary": "Resolves dashboard interface text to its English form.",
+      "tags": [
+        "localization",
+        "translation",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:before.jsx:localizeDashboardDom",
+      "type": "function",
+      "name": "localizeDashboardDom",
+      "filePath": "before.jsx",
+      "lineRange": [
+        715,
+        747
+      ],
+      "summary": "Applies localized text to dashboard DOM elements.",
+      "tags": [
+        "localization",
+        "dom",
+        "dashboard"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:before.jsx:Dashboard",
+      "type": "function",
+      "name": "Dashboard",
+      "filePath": "before.jsx",
+      "lineRange": [
+        771,
+        1255
+      ],
+      "summary": "Composes the primary operations dashboard and its application-level navigation.",
+      "tags": [
+        "component",
+        "dashboard",
+        "entry-point"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:before.jsx:HomeView",
+      "type": "function",
+      "name": "HomeView",
+      "filePath": "before.jsx",
+      "lineRange": [
+        1260,
+        1392
+      ],
+      "summary": "Renders the operations overview and home dashboard.",
+      "tags": [
+        "component",
+        "operations",
+        "overview"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:before.jsx:BranchesAndInventoryView",
+      "type": "function",
+      "name": "BranchesAndInventoryView",
+      "filePath": "before.jsx",
+      "lineRange": [
+        1394,
+        1554
+      ],
+      "summary": "Renders branch and inventory management workflows.",
+      "tags": [
+        "component",
+        "branches",
+        "inventory"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:before.jsx:MissionsView",
+      "type": "function",
+      "name": "MissionsView",
+      "filePath": "before.jsx",
+      "lineRange": [
+        1559,
+        2694
+      ],
+      "summary": "Implements the mission operations interface and its associated workflows.",
+      "tags": [
+        "component",
+        "missions",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:before.jsx:NavItem",
+      "type": "function",
+      "name": "NavItem",
+      "filePath": "before.jsx",
+      "lineRange": [
+        2709,
+        2722
+      ],
+      "summary": "Renders a navigation item for the dashboard shell.",
+      "tags": [
+        "component",
+        "navigation",
+        "ui"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:before.jsx:AuditLogsView",
+      "type": "function",
+      "name": "AuditLogsView",
+      "filePath": "before.jsx",
+      "lineRange": [
+        2740,
+        2878
+      ],
+      "summary": "Renders the audit-log review interface.",
+      "tags": [
+        "component",
+        "audit-logs",
+        "monitoring"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:before.jsx:LocalNewsView",
+      "type": "function",
+      "name": "LocalNewsView",
+      "filePath": "before.jsx",
+      "lineRange": [
+        2883,
+        2972
+      ],
+      "summary": "Renders the local-news dashboard section.",
+      "tags": [
+        "component",
+        "local-news",
+        "dashboard"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cleanup_stale_return_status.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "cleanup_stale_return_status.py",
+      "lineRange": [
+        17,
+        115
+      ],
+      "summary": "Selects eligible stale return-status records and applies the associated cleanup updates.",
+      "tags": [
+        "maintenance",
+        "database",
+        "data-cleanup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:create_idempotency_table.py:create_table",
+      "type": "function",
+      "name": "create_table",
+      "filePath": "create_idempotency_table.py",
+      "lineRange": [
+        12,
+        86
+      ],
+      "summary": "Creates the idempotency table when it is not already present.",
+      "tags": [
+        "database",
+        "schema",
+        "idempotency"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:diag_route_authz.py:get_source",
+      "type": "function",
+      "name": "get_source",
+      "filePath": "diag_route_authz.py",
+      "lineRange": [
+        30,
+        32
+      ],
+      "summary": "Loads source text for the route-analysis diagnostic.",
+      "tags": [
+        "diagnostics",
+        "source-analysis",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:diag_route_authz.py:collect_calls",
+      "type": "function",
+      "name": "collect_calls",
+      "filePath": "diag_route_authz.py",
+      "lineRange": [
+        35,
+        64
+      ],
+      "summary": "Collects call references needed by the route-analysis diagnostic.",
+      "tags": [
+        "diagnostics",
+        "static-analysis",
+        "call-graph"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:diag_route_authz.py:defaults_names",
+      "type": "function",
+      "name": "defaults_names",
+      "filePath": "diag_route_authz.py",
+      "lineRange": [
+        67,
+        82
+      ],
+      "summary": "Collects framework default route names for diagnostic comparison.",
+      "tags": [
+        "diagnostics",
+        "routes",
+        "framework"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:diag_route_authz.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "diag_route_authz.py",
+      "lineRange": [
+        85,
+        123
+      ],
+      "summary": "Runs the route authorization diagnostic and reports its findings.",
+      "tags": [
+        "entry-point",
+        "diagnostics",
+        "authorization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:diag_secret_strength.py:describe",
+      "type": "function",
+      "name": "describe",
+      "filePath": "diag_secret_strength.py",
+      "lineRange": [
+        12,
+        17
+      ],
+      "summary": "Produces a descriptive secret-strength assessment without returning secret material.",
+      "tags": [
+        "security",
+        "diagnostics",
+        "secret-management"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:earthquake_intel.py:run_once",
+      "type": "function",
+      "name": "run_once",
+      "filePath": "earthquake_intel.py",
+      "lineRange": [
+        34,
+        56
+      ],
+      "summary": "Executes one earthquake-intelligence processing cycle.",
+      "tags": [
+        "earthquake",
+        "data-ingestion",
+        "automation"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:after.jsx",
+      "target": "function:after.jsx:LocalNewsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:after.jsx",
+      "target": "function:after.jsx:GlobalDisastersView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:after.jsx",
+      "target": "function:after.jsx:EarthquakesView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:after.jsx",
+      "target": "function:after.jsx:AINewsMonitorView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:after.jsx",
+      "target": "function:after.jsx:DangerConfirmModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:after.jsx",
+      "target": "function:after.jsx:HumanResourcesView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apply_migration.py",
+      "target": "function:apply_migration.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apply_migration.py",
+      "target": "function:apply_migration.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:getEnglishRegionName",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:translateGeneratedUiText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:getEnglishUiText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:localizeDashboardDom",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:Dashboard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:Dashboard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:HomeView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:BranchesAndInventoryView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:MissionsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:NavItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:AuditLogsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:before.jsx",
+      "target": "function:before.jsx:LocalNewsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:cleanup_stale_return_status.py",
+      "target": "function:cleanup_stale_return_status.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:cleanup_stale_return_status.py",
+      "target": "function:cleanup_stale_return_status.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:create_idempotency_table.py",
+      "target": "function:create_idempotency_table.py:create_table",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:create_idempotency_table.py",
+      "target": "function:create_idempotency_table.py:create_table",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_route_authz.py",
+      "target": "function:diag_route_authz.py:get_source",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_route_authz.py",
+      "target": "function:diag_route_authz.py:get_source",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_route_authz.py",
+      "target": "function:diag_route_authz.py:collect_calls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_route_authz.py",
+      "target": "function:diag_route_authz.py:collect_calls",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_route_authz.py",
+      "target": "function:diag_route_authz.py:defaults_names",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_route_authz.py",
+      "target": "function:diag_route_authz.py:defaults_names",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_route_authz.py",
+      "target": "function:diag_route_authz.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_route_authz.py",
+      "target": "function:diag_route_authz.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_secret_strength.py",
+      "target": "function:diag_secret_strength.py:describe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_secret_strength.py",
+      "target": "function:diag_secret_strength.py:describe",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:earthquake_intel.py",
+      "target": "function:earthquake_intel.py:run_once",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:earthquake_intel.py",
+      "target": "function:earthquake_intel.py:run_once",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cleanup_stale_return_status.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

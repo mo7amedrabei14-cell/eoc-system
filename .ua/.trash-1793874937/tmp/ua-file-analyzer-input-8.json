@@ -1,0 +1,113 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 8,
+  "batchFiles": [
+    {
+      "path": "smoke_test_anthropic.py",
+      "language": "python",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_gemini.py",
+      "language": "python",
+      "sizeLines": 150,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_gemini_final.py",
+      "language": "python",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_gemini_v2.py",
+      "language": "python",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "smoke_test_gemini_v3.py",
+      "language": "python",
+      "sizeLines": 152,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_gemini.py",
+      "language": "python",
+      "sizeLines": 66,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_gemini2.py",
+      "language": "python",
+      "sizeLines": 156,
+      "fileCategory": "code"
+    },
+    {
+      "path": "test_gemini3.py",
+      "language": "python",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "weather_intel.py",
+      "language": "python",
+      "sizeLines": 1214,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "smoke_test_anthropic.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_gemini.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_gemini_final.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_gemini_v2.py": [
+      "weather_intel.py"
+    ],
+    "smoke_test_gemini_v3.py": [
+      "weather_intel.py"
+    ],
+    "test_gemini.py": [
+      "weather_intel.py"
+    ],
+    "test_gemini2.py": [
+      "weather_intel.py"
+    ],
+    "test_gemini3.py": [
+      "weather_intel.py"
+    ],
+    "weather_intel.py": []
+  },
+  "neighborMap": {}
+}

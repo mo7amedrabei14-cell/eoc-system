@@ -1,0 +1,314 @@
+{
+  "nodes": [
+    {
+      "id": "file:perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "type": "file",
+      "name": "App-KKyF1FNW.js",
+      "filePath": "perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "summary": "Compiled application entry chunk for the baseline22 frontend, linked to the shared API, map, React, runtime, and vendor assets.",
+      "tags": [
+        "application",
+        "compiled-bundle",
+        "entry-chunk"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "type": "file",
+      "name": "apiBase-DSGGbg7P.js",
+      "filePath": "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "summary": "Small compiled API-base utility asset exposing one minified export.",
+      "tags": [
+        "api",
+        "compiled-bundle",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/exceljs.min-BmMNYSu0.js",
+      "type": "file",
+      "name": "exceljs.min-BmMNYSu0.js",
+      "filePath": "perf/baseline22-dist/assets/exceljs.min-BmMNYSu0.js",
+      "summary": "Bundled ExcelJS spreadsheet-processing asset used by the shared vendor chunk.",
+      "tags": [
+        "spreadsheet",
+        "compiled-bundle",
+        "vendor-library"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/index-CBRKr4gE.js",
+      "type": "file",
+      "name": "index-CBRKr4gE.js",
+      "filePath": "perf/baseline22-dist/assets/index-CBRKr4gE.js",
+      "summary": "Compact compiled entry and loader chunk connecting the API, React, and runtime assets.",
+      "tags": [
+        "entry-chunk",
+        "compiled-bundle",
+        "loader"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/jszip.min-DnCw9i7G.js",
+      "type": "file",
+      "name": "jszip.min-DnCw9i7G.js",
+      "filePath": "perf/baseline22-dist/assets/jszip.min-DnCw9i7G.js",
+      "summary": "Bundled JSZip archive-processing asset used by the shared vendor chunk.",
+      "tags": [
+        "archive",
+        "compiled-bundle",
+        "vendor-library"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "type": "file",
+      "name": "map-vendor-DAKzUuMp.js",
+      "filePath": "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "summary": "Map-focused third-party vendor chunk linked to the shared runtime and exposing a minified export.",
+      "tags": [
+        "mapping",
+        "compiled-bundle",
+        "vendor-library"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "type": "file",
+      "name": "react-vendor-CmLZwYxA.js",
+      "filePath": "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "summary": "Bundled React runtime chunk with exported runtime functions and dependencies on adjacent runtime assets.",
+      "tags": [
+        "react",
+        "compiled-bundle",
+        "runtime"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "type": "file",
+      "name": "rolldown-runtime-W7wSyTde.js",
+      "filePath": "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "summary": "Shared Rolldown-generated module runtime providing exported helpers to compiled assets.",
+      "tags": [
+        "build-runtime",
+        "compiled-bundle",
+        "module-loader"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "type": "file",
+      "name": "vendor-CzY76_2m.js",
+      "filePath": "perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "summary": "Shared compiled vendor chunk containing bundled dependencies and links to the React and module-runtime assets.",
+      "tags": [
+        "vendor",
+        "compiled-bundle",
+        "shared-dependency"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:perf/baseline22-dist/assets/App-KKyF1FNW.js:xa",
+      "type": "function",
+      "name": "xa",
+      "filePath": "perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "lineRange": [
+        12,
+        22
+      ],
+      "summary": "Substantial internal routine in the compiled application chunk; minification obscures its original name and specific responsibility.",
+      "tags": [
+        "application",
+        "compiled-bundle",
+        "internal-routine"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js:_",
+      "type": "function",
+      "name": "_",
+      "filePath": "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "lineRange": [
+        1,
+        9
+      ],
+      "summary": "Exported runtime function in the bundled React asset; minification obscures its original operation name.",
+      "tags": [
+        "react",
+        "runtime",
+        "compiled-bundle"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js:h",
+      "type": "function",
+      "name": "h",
+      "filePath": "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "lineRange": [
+        1,
+        9
+      ],
+      "summary": "Exported runtime function in the bundled React asset; minification obscures its original operation name.",
+      "tags": [
+        "react",
+        "runtime",
+        "compiled-bundle"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "target": "file:perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "target": "file:perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "target": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "target": "file:perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "target": "file:perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/exceljs.min-BmMNYSu0.js",
+      "target": "file:perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/index-CBRKr4gE.js",
+      "target": "file:perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/index-CBRKr4gE.js",
+      "target": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/index-CBRKr4gE.js",
+      "target": "file:perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/jszip.min-DnCw9i7G.js",
+      "target": "file:perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "target": "file:perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "target": "file:perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "target": "file:perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "target": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "target": "file:perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "target": "function:perf/baseline22-dist/assets/App-KKyF1FNW.js:xa",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "target": "function:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js:_",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "target": "function:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js:_",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "target": "function:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js:h",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "target": "function:perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js:h",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

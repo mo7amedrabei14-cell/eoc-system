@@ -1,0 +1,1540 @@
+{
+  "nodes": [
+    {
+      "id": "file:tests/test_cleanup_stale_return_status.py",
+      "type": "file",
+      "name": "test_cleanup_stale_return_status.py",
+      "filePath": "tests/test_cleanup_stale_return_status.py",
+      "summary": "Tests cleanup behavior for stale participant return-status entries with fake database connections.",
+      "tags": [
+        "test",
+        "database",
+        "cleanup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:tools/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "tools/README.md",
+      "summary": "Documentation for the repository utility scripts and their usage.",
+      "tags": [
+        "documentation",
+        "developer-tools",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tools/check_credential_hygiene.py",
+      "type": "file",
+      "name": "check_credential_hygiene.py",
+      "filePath": "tools/check_credential_hygiene.py",
+      "summary": "Repository hygiene scanner that detects credential-like patterns and emits redacted findings.",
+      "tags": [
+        "security",
+        "validation",
+        "repository-tool"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:tools/tests/test_check_credential_hygiene.py",
+      "type": "file",
+      "name": "test_check_credential_hygiene.py",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "summary": "Tests credential-hygiene detection, safe exclusions, redaction, and Git-mode behavior.",
+      "tags": [
+        "test",
+        "security",
+        "redaction"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:verify_db_connections.py",
+      "type": "file",
+      "name": "verify_db_connections.py",
+      "filePath": "verify_db_connections.py",
+      "summary": "Static-analysis utility that checks database connection acquisition and cleanup patterns.",
+      "tags": [
+        "database",
+        "static-analysis",
+        "verification"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:verify_secrets_history.py",
+      "type": "file",
+      "name": "verify_secrets_history.py",
+      "filePath": "verify_secrets_history.py",
+      "summary": "History-audit utility that fingerprints candidate secret material and reports metadata without printing values.",
+      "tags": [
+        "security",
+        "git-history",
+        "redaction"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:weather_backfill.py.bak",
+      "type": "file",
+      "name": "weather_backfill.py.bak",
+      "filePath": "weather_backfill.py.bak",
+      "summary": "Backup Python file associated with weather-data backfills; structural extraction skipped this backup.",
+      "tags": [
+        "backup",
+        "data-pipeline",
+        "weather"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:weather_extra_backfill.py",
+      "type": "file",
+      "name": "weather_extra_backfill.py",
+      "filePath": "weather_extra_backfill.py",
+      "summary": "Utility for retrieving and backfilling weather-related data.",
+      "tags": [
+        "data-pipeline",
+        "weather",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:تصنيفات مهام.xlsx",
+      "type": "file",
+      "name": "تصنيفات مهام.xlsx",
+      "filePath": "تصنيفات مهام.xlsx",
+      "summary": "Project file retained in the analysis batch; its contents were not summarized.",
+      "tags": [
+        "project-file",
+        "analysis-batch",
+        "unparsed"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:تصنيفات مهام_مراجعة.xlsx",
+      "type": "file",
+      "name": "تصنيفات مهام_مراجعة.xlsx",
+      "filePath": "تصنيفات مهام_مراجعة.xlsx",
+      "summary": "Project file retained in the analysis batch; its contents were not summarized.",
+      "tags": [
+        "project-file",
+        "analysis-batch",
+        "unparsed"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:خطة التشغيل.docx",
+      "type": "file",
+      "name": "خطة التشغيل.docx",
+      "filePath": "خطة التشغيل.docx",
+      "summary": "Project file retained in the analysis batch; its contents were not summarized.",
+      "tags": [
+        "project-file",
+        "analysis-batch",
+        "unparsed"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:فورم المشاركين.xlsx",
+      "type": "file",
+      "name": "فورم المشاركين.xlsx",
+      "filePath": "فورم المشاركين.xlsx",
+      "summary": "Project file retained in the analysis batch; its contents were not summarized.",
+      "tags": [
+        "project-file",
+        "analysis-batch",
+        "unparsed"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tests/test_cleanup_stale_return_status.py:test_cleanup_updates_only_selected_eligible_participants",
+      "type": "function",
+      "name": "test_cleanup_updates_only_selected_eligible_participants",
+      "filePath": "tests/test_cleanup_stale_return_status.py",
+      "lineRange": [
+        62,
+        80
+      ],
+      "summary": "Verifies cleanup updates only the selected eligible participants.",
+      "tags": [
+        "test",
+        "helper",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tests/test_cleanup_stale_return_status.py:test_cleanup_with_no_eligible_rows_performs_no_update",
+      "type": "function",
+      "name": "test_cleanup_with_no_eligible_rows_performs_no_update",
+      "filePath": "tests/test_cleanup_stale_return_status.py",
+      "lineRange": [
+        83,
+        92
+      ],
+      "summary": "Verifies cleanup avoids updates when no eligible rows are available.",
+      "tags": [
+        "test",
+        "helper",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/test_cleanup_stale_return_status.py:FakeCursor",
+      "type": "class",
+      "name": "FakeCursor",
+      "filePath": "tests/test_cleanup_stale_return_status.py",
+      "lineRange": [
+        7,
+        39
+      ],
+      "summary": "Test double that records cursor operations for database-behavior assertions.",
+      "tags": [
+        "test",
+        "fixture",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/test_cleanup_stale_return_status.py:FakeConnection",
+      "type": "class",
+      "name": "FakeConnection",
+      "filePath": "tests/test_cleanup_stale_return_status.py",
+      "lineRange": [
+        42,
+        59
+      ],
+      "summary": "Test double that supplies cursor and transaction behavior to database tests.",
+      "tags": [
+        "test",
+        "fixture",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:is_placeholder",
+      "type": "function",
+      "name": "is_placeholder",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        245,
+        260
+      ],
+      "summary": "Recognizes placeholder values that should not be treated as real credentials.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:looks_like_credential_value",
+      "type": "function",
+      "name": "looks_like_credential_value",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        263,
+        269
+      ],
+      "summary": "Checks whether text has the shape of a credential value without exposing it.",
+      "tags": [
+        "security",
+        "validation",
+        "redaction"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:is_sensitive_content_path",
+      "type": "function",
+      "name": "is_sensitive_content_path",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        272,
+        281
+      ],
+      "summary": "Identifies paths whose contents should be excluded from scanning.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:is_scan_extension",
+      "type": "function",
+      "name": "is_scan_extension",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        284,
+        288
+      ],
+      "summary": "Determines whether a file extension is eligible for scanning.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:classify_sensitive_path",
+      "type": "function",
+      "name": "classify_sensitive_path",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        291,
+        295
+      ],
+      "summary": "Classifies paths according to the scanner safety rules.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:is_weak_password_dataset",
+      "type": "function",
+      "name": "is_weak_password_dataset",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        298,
+        302
+      ],
+      "summary": "Recognizes password-dataset patterns for scanner handling.",
+      "tags": [
+        "security",
+        "validation",
+        "redaction"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:collect_git_files",
+      "type": "function",
+      "name": "collect_git_files",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        307,
+        325
+      ],
+      "summary": "Collects repository paths from Git-tracked files.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:walk_files",
+      "type": "function",
+      "name": "walk_files",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        328,
+        335
+      ],
+      "summary": "Walks eligible repository files for the scanner.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:read_text",
+      "type": "function",
+      "name": "read_text",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        338,
+        347
+      ],
+      "summary": "Reads eligible text input while applying scanner safeguards.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:scan_lines",
+      "type": "function",
+      "name": "scan_lines",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        352,
+        430
+      ],
+      "summary": "Scans text lines for credential indicators while producing redacted findings.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:scan_password_dictionary",
+      "type": "function",
+      "name": "scan_password_dictionary",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        433,
+        458
+      ],
+      "summary": "Checks content for password-dictionary patterns.",
+      "tags": [
+        "security",
+        "validation",
+        "redaction"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:scan_guessing_loop",
+      "type": "function",
+      "name": "scan_guessing_loop",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        461,
+        487
+      ],
+      "summary": "Checks source patterns for credential-guessing loops.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:scan_file",
+      "type": "function",
+      "name": "scan_file",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        490,
+        526
+      ],
+      "summary": "Scans one eligible file and returns structured findings.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:scan",
+      "type": "function",
+      "name": "scan",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        529,
+        562
+      ],
+      "summary": "Coordinates scanning across eligible repository content.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:_line_at",
+      "type": "function",
+      "name": "_line_at",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        568,
+        578
+      ],
+      "summary": "Locates a source line for internal finding context.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:actionable",
+      "type": "function",
+      "name": "actionable",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        583,
+        586
+      ],
+      "summary": "Determines whether a finding warrants an actionable report.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:print_text_report",
+      "type": "function",
+      "name": "print_text_report",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        589,
+        614
+      ],
+      "summary": "Formats findings as a text report with sensitive values redacted.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:print_json_report",
+      "type": "function",
+      "name": "print_json_report",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        617,
+        629
+      ],
+      "summary": "Formats findings as JSON with sensitive values redacted.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:build_parser",
+      "type": "function",
+      "name": "build_parser",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        632,
+        645
+      ],
+      "summary": "Builds the command-line argument parser for the scanner.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/check_credential_hygiene.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        648,
+        666
+      ],
+      "summary": "Runs the command-line workflow for the associated utility.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tools/check_credential_hygiene.py:Finding",
+      "type": "class",
+      "name": "Finding",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        214,
+        230
+      ],
+      "summary": "Groups related behavior for the Finding component in its containing file.",
+      "tags": [
+        "performance-testing",
+        "load-testing",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tools/check_credential_hygiene.py:ScanResult",
+      "type": "class",
+      "name": "ScanResult",
+      "filePath": "tools/check_credential_hygiene.py",
+      "lineRange": [
+        234,
+        240
+      ],
+      "summary": "Groups related behavior for the ScanResult component in its containing file.",
+      "tags": [
+        "performance-testing",
+        "load-testing",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/tests/test_check_credential_hygiene.py:_s",
+      "type": "function",
+      "name": "_s",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "lineRange": [
+        35,
+        36
+      ],
+      "summary": "Provides a short test helper for preparing test input.",
+      "tags": [
+        "test",
+        "helper",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/tests/test_check_credential_hygiene.py:_run",
+      "type": "function",
+      "name": "_run",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "lineRange": [
+        52,
+        54
+      ],
+      "summary": "Runs the credential-hygiene tool from the test suite.",
+      "tags": [
+        "test",
+        "helper",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tools/tests/test_check_credential_hygiene.py:_run_git_mode",
+      "type": "function",
+      "name": "_run_git_mode",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "lineRange": [
+        309,
+        314
+      ],
+      "summary": "Runs the tool in Git mode for repository-safety tests.",
+      "tags": [
+        "test",
+        "helper",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tools/tests/test_check_credential_hygiene.py:HygieneTestCase",
+      "type": "class",
+      "name": "HygieneTestCase",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "lineRange": [
+        57,
+        77
+      ],
+      "summary": "Shared test fixture for invoking the repository hygiene checker in isolated cases.",
+      "tags": [
+        "test",
+        "fixture",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tools/tests/test_check_credential_hygiene.py:DetectionTests",
+      "type": "class",
+      "name": "DetectionTests",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "lineRange": [
+        80,
+        150
+      ],
+      "summary": "Tests recognition of credential-bearing source patterns.",
+      "tags": [
+        "test",
+        "fixture",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tools/tests/test_check_credential_hygiene.py:NonDetectionTests",
+      "type": "class",
+      "name": "NonDetectionTests",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "lineRange": [
+        153,
+        217
+      ],
+      "summary": "Tests safe-value and excluded-content handling to avoid false positives.",
+      "tags": [
+        "test",
+        "fixture",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tools/tests/test_check_credential_hygiene.py:SafetyTests",
+      "type": "class",
+      "name": "SafetyTests",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "lineRange": [
+        220,
+        291
+      ],
+      "summary": "Tests redaction, report validity, directives, and scan-safety behavior.",
+      "tags": [
+        "test",
+        "fixture",
+        "python"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tools/tests/test_check_credential_hygiene.py:GitModeTests",
+      "type": "class",
+      "name": "GitModeTests",
+      "filePath": "tools/tests/test_check_credential_hygiene.py",
+      "lineRange": [
+        295,
+        306
+      ],
+      "summary": "Tests Git mode handling of tracked sensitive paths without reading their contents.",
+      "tags": [
+        "test",
+        "fixture",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:verify_db_connections.py:parse",
+      "type": "function",
+      "name": "parse",
+      "filePath": "verify_db_connections.py",
+      "lineRange": [
+        46,
+        48
+      ],
+      "summary": "Parses source text for database connection lifecycle analysis.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:verify_db_connections.py:calls_in",
+      "type": "function",
+      "name": "calls_in",
+      "filePath": "verify_db_connections.py",
+      "lineRange": [
+        51,
+        75
+      ],
+      "summary": "Finds function calls within a parsed source construct.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:verify_db_connections.py:acquires",
+      "type": "function",
+      "name": "acquires",
+      "filePath": "verify_db_connections.py",
+      "lineRange": [
+        78,
+        87
+      ],
+      "summary": "Identifies database connection acquisition operations.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:verify_db_connections.py:closes",
+      "type": "function",
+      "name": "closes",
+      "filePath": "verify_db_connections.py",
+      "lineRange": [
+        90,
+        111
+      ],
+      "summary": "Identifies database connection cleanup operations.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:verify_db_connections.py:returns_connection",
+      "type": "function",
+      "name": "returns_connection",
+      "filePath": "verify_db_connections.py",
+      "lineRange": [
+        114,
+        119
+      ],
+      "summary": "Identifies return or release operations for database connections.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:verify_secrets_history.py:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "verify_secrets_history.py",
+      "lineRange": [
+        43,
+        45
+      ],
+      "summary": "Executes the secret-history audit workflow.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:verify_secrets_history.py:fingerprint",
+      "type": "function",
+      "name": "fingerprint",
+      "filePath": "verify_secrets_history.py",
+      "lineRange": [
+        48,
+        49
+      ],
+      "summary": "Creates a non-reversible fingerprint for matching candidate values.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:verify_secrets_history.py:jwt_meta",
+      "type": "function",
+      "name": "jwt_meta",
+      "filePath": "verify_secrets_history.py",
+      "lineRange": [
+        52,
+        61
+      ],
+      "summary": "Extracts non-secret metadata from a token-shaped value.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_extra_backfill.py:get",
+      "type": "function",
+      "name": "get",
+      "filePath": "weather_extra_backfill.py",
+      "lineRange": [
+        16,
+        25
+      ],
+      "summary": "Retrieves weather-related input for the backfill workflow.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:weather_extra_backfill.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "weather_extra_backfill.py",
+      "lineRange": [
+        27,
+        72
+      ],
+      "summary": "Runs the command-line workflow for the associated utility.",
+      "tags": [
+        "utility",
+        "logic",
+        "python"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "file:cleanup_stale_return_status.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "file:tools/check_credential_hygiene.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "function:tests/test_cleanup_stale_return_status.py:test_cleanup_updates_only_selected_eligible_participants",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "function:tests/test_cleanup_stale_return_status.py:test_cleanup_updates_only_selected_eligible_participants",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "function:tests/test_cleanup_stale_return_status.py:test_cleanup_with_no_eligible_rows_performs_no_update",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "function:tests/test_cleanup_stale_return_status.py:test_cleanup_with_no_eligible_rows_performs_no_update",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "class:tests/test_cleanup_stale_return_status.py:FakeCursor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "class:tests/test_cleanup_stale_return_status.py:FakeCursor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "class:tests/test_cleanup_stale_return_status.py:FakeConnection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_cleanup_stale_return_status.py",
+      "target": "class:tests/test_cleanup_stale_return_status.py:FakeConnection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:is_placeholder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:is_placeholder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:looks_like_credential_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:looks_like_credential_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:is_sensitive_content_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:is_sensitive_content_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:is_scan_extension",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:is_scan_extension",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:classify_sensitive_path",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:classify_sensitive_path",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:is_weak_password_dataset",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:is_weak_password_dataset",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:collect_git_files",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:collect_git_files",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:walk_files",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:walk_files",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:read_text",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:read_text",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan_lines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan_lines",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan_password_dictionary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan_password_dictionary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan_guessing_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan_guessing_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan_file",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan_file",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:scan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:_line_at",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:_line_at",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:actionable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:actionable",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:print_text_report",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:print_text_report",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:print_json_report",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:print_json_report",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:build_parser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:build_parser",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "function:tools/check_credential_hygiene.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "class:tools/check_credential_hygiene.py:Finding",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "class:tools/check_credential_hygiene.py:Finding",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "class:tools/check_credential_hygiene.py:ScanResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/check_credential_hygiene.py",
+      "target": "class:tools/check_credential_hygiene.py:ScanResult",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "function:tools/tests/test_check_credential_hygiene.py:_s",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "function:tools/tests/test_check_credential_hygiene.py:_s",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "function:tools/tests/test_check_credential_hygiene.py:_run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "function:tools/tests/test_check_credential_hygiene.py:_run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "function:tools/tests/test_check_credential_hygiene.py:_run_git_mode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "function:tools/tests/test_check_credential_hygiene.py:_run_git_mode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:HygieneTestCase",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:HygieneTestCase",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:DetectionTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:DetectionTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:NonDetectionTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:NonDetectionTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:SafetyTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:SafetyTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:GitModeTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tools/tests/test_check_credential_hygiene.py",
+      "target": "class:tools/tests/test_check_credential_hygiene.py:GitModeTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:parse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:parse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:calls_in",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:calls_in",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:acquires",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:acquires",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:closes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:closes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:returns_connection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:verify_db_connections.py",
+      "target": "function:verify_db_connections.py:returns_connection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:verify_secrets_history.py",
+      "target": "function:verify_secrets_history.py:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:verify_secrets_history.py",
+      "target": "function:verify_secrets_history.py:run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:verify_secrets_history.py",
+      "target": "function:verify_secrets_history.py:fingerprint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:verify_secrets_history.py",
+      "target": "function:verify_secrets_history.py:fingerprint",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:verify_secrets_history.py",
+      "target": "function:verify_secrets_history.py:jwt_meta",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:verify_secrets_history.py",
+      "target": "function:verify_secrets_history.py:jwt_meta",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_extra_backfill.py",
+      "target": "function:weather_extra_backfill.py:get",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_extra_backfill.py",
+      "target": "function:weather_extra_backfill.py:get",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:weather_extra_backfill.py",
+      "target": "function:weather_extra_backfill.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:weather_extra_backfill.py",
+      "target": "function:weather_extra_backfill.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

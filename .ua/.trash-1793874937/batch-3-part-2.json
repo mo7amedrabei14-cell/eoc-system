@@ -1,0 +1,980 @@
+{
+  "nodes": [
+    {
+      "id": "function:main.py:_execute_contiguous_batches",
+      "type": "function",
+      "name": "_execute_contiguous_batches",
+      "filePath": "main.py",
+      "lineRange": [
+        59,
+        70
+      ],
+      "summary": "Handles the execute contiguous batches operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_wireless_connection",
+      "type": "function",
+      "name": "_wireless_connection",
+      "filePath": "main.py",
+      "lineRange": [
+        1056,
+        1089
+      ],
+      "summary": "Handles the wireless connection operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_cache_write",
+      "type": "function",
+      "name": "_cache_write",
+      "filePath": "main.py",
+      "lineRange": [
+        1508,
+        1513
+      ],
+      "summary": "Handles the cache write operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:notes_marker_value",
+      "type": "function",
+      "name": "notes_marker_value",
+      "filePath": "main.py",
+      "lineRange": [
+        2095,
+        2101
+      ],
+      "summary": "Handles the notes marker value operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:notify_youth_of_completion",
+      "type": "function",
+      "name": "notify_youth_of_completion",
+      "filePath": "main.py",
+      "lineRange": [
+        2297,
+        2358
+      ],
+      "summary": "Handles the notify youth of completion operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:mission_start_dt",
+      "type": "function",
+      "name": "mission_start_dt",
+      "filePath": "main.py",
+      "lineRange": [
+        2816,
+        2830
+      ],
+      "summary": "Handles the mission start dt operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:mission_end_dt",
+      "type": "function",
+      "name": "mission_end_dt",
+      "filePath": "main.py",
+      "lineRange": [
+        3287,
+        3296
+      ],
+      "summary": "Handles the mission end dt operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:end_participation",
+      "type": "function",
+      "name": "end_participation",
+      "filePath": "main.py",
+      "lineRange": [
+        4955,
+        5021
+      ],
+      "summary": "Handles the end participation operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:clear_all_missions",
+      "type": "function",
+      "name": "clear_all_missions",
+      "filePath": "main.py",
+      "lineRange": [
+        5965,
+        6025
+      ],
+      "summary": "Handles the clear all missions operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:update_local_news",
+      "type": "function",
+      "name": "update_local_news",
+      "filePath": "main.py",
+      "lineRange": [
+        6921,
+        6965
+      ],
+      "summary": "Handles the update local news operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:handover_export_log",
+      "type": "function",
+      "name": "handover_export_log",
+      "filePath": "main.py",
+      "lineRange": [
+        7347,
+        7380
+      ],
+      "summary": "Handles the handover export log operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:update_global_eq",
+      "type": "function",
+      "name": "update_global_eq",
+      "filePath": "main.py",
+      "lineRange": [
+        7836,
+        7856
+      ],
+      "summary": "Handles the update global eq operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:normalize_legacy_ai_news",
+      "type": "function",
+      "name": "normalize_legacy_ai_news",
+      "filePath": "main.py",
+      "lineRange": [
+        8507,
+        8546
+      ],
+      "summary": "Handles the normalize legacy ai news operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_weather",
+      "type": "function",
+      "name": "get_weather",
+      "filePath": "main.py",
+      "lineRange": [
+        9037,
+        9109
+      ],
+      "summary": "Handles the get weather operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:get_gov_contacts",
+      "type": "function",
+      "name": "get_gov_contacts",
+      "filePath": "main.py",
+      "lineRange": [
+        9565,
+        9625
+      ],
+      "summary": "Handles the get gov contacts operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_eq_intel_hist_min_day_gap",
+      "type": "function",
+      "name": "_eq_intel_hist_min_day_gap",
+      "filePath": "main.py",
+      "lineRange": [
+        10046,
+        10058
+      ],
+      "summary": "Handles the eq intel hist min day gap operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_intel_ingest_events",
+      "type": "function",
+      "name": "_eq_intel_ingest_events",
+      "filePath": "main.py",
+      "lineRange": [
+        10545,
+        10761
+      ],
+      "summary": "Handles the eq intel ingest events operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:main.py:_eq_catalog_local_hist",
+      "type": "function",
+      "name": "_eq_catalog_local_hist",
+      "filePath": "main.py",
+      "lineRange": [
+        11723,
+        11774
+      ],
+      "summary": "Handles the eq catalog local hist operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_eq_forecast_poisson_prob",
+      "type": "function",
+      "name": "_eq_forecast_poisson_prob",
+      "filePath": "main.py",
+      "lineRange": [
+        12408,
+        12419
+      ],
+      "summary": "Handles the eq forecast poisson prob operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_weather_intel_extra_history",
+      "type": "function",
+      "name": "get_weather_intel_extra_history",
+      "filePath": "main.py",
+      "lineRange": [
+        13012,
+        13053
+      ],
+      "summary": "Handles the get weather intel extra history operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:run_jl_sessions_backfill",
+      "type": "function",
+      "name": "run_jl_sessions_backfill",
+      "filePath": "main.py",
+      "lineRange": [
+        14023,
+        14062
+      ],
+      "summary": "Handles the run jl sessions backfill operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_wireless_device_dict",
+      "type": "function",
+      "name": "_wireless_device_dict",
+      "filePath": "main.py",
+      "lineRange": [
+        14424,
+        14432
+      ],
+      "summary": "Handles the wireless device dict operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:return_wireless_delivery",
+      "type": "function",
+      "name": "return_wireless_delivery",
+      "filePath": "main.py",
+      "lineRange": [
+        14997,
+        15065
+      ],
+      "summary": "Handles the return wireless delivery operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:main.py:PeriodModel",
+      "type": "class",
+      "name": "PeriodModel",
+      "filePath": "main.py",
+      "lineRange": [
+        1936,
+        1941
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:VolunteerRoomNoteRowModel",
+      "type": "class",
+      "name": "VolunteerRoomNoteRowModel",
+      "filePath": "main.py",
+      "lineRange": [
+        6092,
+        6096
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:GovContactRowModel",
+      "type": "class",
+      "name": "GovContactRowModel",
+      "filePath": "main.py",
+      "lineRange": [
+        9474,
+        9491
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:WirelessDeviceIn",
+      "type": "class",
+      "name": "WirelessDeviceIn",
+      "filePath": "main.py",
+      "lineRange": [
+        14276,
+        14281
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:mission_flow_test.py",
+      "type": "file",
+      "name": "mission_flow_test.py",
+      "filePath": "mission_flow_test.py",
+      "summary": "Exercises mission-flow behavior across the application and database layers.",
+      "tags": [
+        "test",
+        "mission",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:mission_flow_test.py:ok",
+      "type": "function",
+      "name": "ok",
+      "filePath": "mission_flow_test.py",
+      "lineRange": [
+        12,
+        19
+      ],
+      "summary": "Exercises or verifies the ok behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:repro_route_bug.py",
+      "type": "file",
+      "name": "repro_route_bug.py",
+      "filePath": "repro_route_bug.py",
+      "summary": "Reproduces a route-related regression using the application and its supporting modules.",
+      "tags": [
+        "diagnostic",
+        "reproduction",
+        "routing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:repro_route_bug.py:ok",
+      "type": "function",
+      "name": "ok",
+      "filePath": "repro_route_bug.py",
+      "lineRange": [
+        35,
+        38
+      ],
+      "summary": "Handles the ok operation in this module.",
+      "tags": [
+        "utility",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_execute_contiguous_batches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_execute_contiguous_batches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_connection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_connection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_cache_write",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_cache_write",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:notes_marker_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:notes_marker_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:notify_youth_of_completion",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:notify_youth_of_completion",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:mission_start_dt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:mission_start_dt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:mission_end_dt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:mission_end_dt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:end_participation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:end_participation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_missions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_missions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_local_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_local_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:handover_export_log",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:handover_export_log",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_global_eq",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_global_eq",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:normalize_legacy_ai_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:normalize_legacy_ai_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_gov_contacts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_gov_contacts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_hist_min_day_gap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_hist_min_day_gap",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_ingest_events",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_ingest_events",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_catalog_local_hist",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_catalog_local_hist",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_forecast_poisson_prob",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_forecast_poisson_prob",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_extra_history",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_extra_history",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:run_jl_sessions_backfill",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:run_jl_sessions_backfill",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_device_dict",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_device_dict",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:return_wireless_delivery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:return_wireless_delivery",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:PeriodModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:PeriodModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:VolunteerRoomNoteRowModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:VolunteerRoomNoteRowModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:GovContactRowModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:GovContactRowModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessDeviceIn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessDeviceIn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:mission_flow_test.py",
+      "target": "function:mission_flow_test.py:ok",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:mission_flow_test.py",
+      "target": "function:mission_flow_test.py:ok",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:repro_route_bug.py",
+      "target": "function:repro_route_bug.py:ok",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:repro_route_bug.py",
+      "target": "function:repro_route_bug.py:ok",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:mission_flow_test.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:mission_flow_test.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:db.py",
+      "target": "file:mission_flow_test.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:mission_flow_test.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:repro_route_bug.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:repro_route_bug.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:repro_route_bug.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

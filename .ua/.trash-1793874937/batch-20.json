@@ -1,0 +1,76 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/App.css",
+      "type": "file",
+      "name": "App.css",
+      "filePath": "frontend/src/App.css",
+      "summary": "Styles the starter interface, including its counter, hero artwork, documentation links, and responsive next-step layout.",
+      "tags": ["component-styles", "starter-ui", "responsive-layout"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:frontend/src/_apt2.txt",
+      "type": "document",
+      "name": "_apt2.txt",
+      "filePath": "frontend/src/_apt2.txt",
+      "summary": "Supplementary plain-text activity data used as a frontend reference; individual entries and values are intentionally omitted.",
+      "tags": ["text-reference", "activity-data", "operational-reporting"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/index.css",
+      "type": "file",
+      "name": "index.css",
+      "filePath": "frontend/src/index.css",
+      "summary": "Defines the frontend's global EOC design system, including shared theme tokens, typography, surfaces, and application-wide styling for dark and light modes.",
+      "tags": ["design-system", "global-styles", "theme-tokens", "application-ui"],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:frontend/src/missing.txt",
+      "type": "document",
+      "name": "missing.txt",
+      "filePath": "frontend/src/missing.txt",
+      "summary": "A short Arabic-language reference list of activity categories and aggregate counts; specific entries are not reproduced here.",
+      "tags": ["text-reference", "activity-data", "operational-reporting"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/mobile.css",
+      "type": "file",
+      "name": "mobile.css",
+      "filePath": "frontend/src/mobile.css",
+      "summary": "Applies mobile-only layout overrides below 768px to reduce horizontal overflow and adapt tables, cards, and section spacing for narrow screens.",
+      "tags": ["mobile-layout", "responsive-styles", "table-cards", "overflow-control"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/supercharged-tail.css",
+      "type": "file",
+      "name": "supercharged-tail.css",
+      "filePath": "frontend/src/supercharged-tail.css",
+      "summary": "Provides final cascade overrides for notification, emergency, update, and login-gate visuals, replacing costly continuous effects with lighter animation behavior.",
+      "tags": ["animation", "performance-styles", "notification-ui", "theme-overrides"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/supercharged.css",
+      "type": "file",
+      "name": "supercharged.css",
+      "filePath": "frontend/src/supercharged.css",
+      "summary": "Defines an EOC visual and performance layer with shared surface tokens and restrained animation rules, intended to precede mobile-specific overrides.",
+      "tags": ["design-system", "performance-styles", "animation", "theme-tokens"],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/index.css",
+      "target": "file:frontend/src/main.jsx",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

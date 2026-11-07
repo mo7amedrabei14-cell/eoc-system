@@ -1,0 +1,959 @@
+{
+  "nodes": [
+    {
+      "id": "function:main.py:validate_clear_confirmation",
+      "type": "function",
+      "name": "validate_clear_confirmation",
+      "filePath": "main.py",
+      "lineRange": [
+        173,
+        178
+      ],
+      "summary": "Handles the validate clear confirmation operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_db_unavailable_handler",
+      "type": "function",
+      "name": "_db_unavailable_handler",
+      "filePath": "main.py",
+      "lineRange": [
+        1251,
+        1257
+      ],
+      "summary": "Handles the db unavailable handler operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_login_is_throttled",
+      "type": "function",
+      "name": "_login_is_throttled",
+      "filePath": "main.py",
+      "lineRange": [
+        1616,
+        1623
+      ],
+      "summary": "Handles the login is throttled operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:validate_mission_completion",
+      "type": "function",
+      "name": "validate_mission_completion",
+      "filePath": "main.py",
+      "lineRange": [
+        2163,
+        2174
+      ],
+      "summary": "Handles the validate mission completion operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:dedupe_participants",
+      "type": "function",
+      "name": "dedupe_participants",
+      "filePath": "main.py",
+      "lineRange": [
+        2639,
+        2657
+      ],
+      "summary": "Handles the dedupe participants operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:participation_start_dt",
+      "type": "function",
+      "name": "participation_start_dt",
+      "filePath": "main.py",
+      "lineRange": [
+        2875,
+        2898
+      ],
+      "summary": "Handles the participation start dt operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_mission_by_idempotency",
+      "type": "function",
+      "name": "get_mission_by_idempotency",
+      "filePath": "main.py",
+      "lineRange": [
+        3641,
+        3664
+      ],
+      "summary": "Handles the get mission by idempotency operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:remove_draft_session",
+      "type": "function",
+      "name": "remove_draft_session",
+      "filePath": "main.py",
+      "lineRange": [
+        5399,
+        5446
+      ],
+      "summary": "Handles the remove draft session operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_volunteer_room_notes",
+      "type": "function",
+      "name": "get_volunteer_room_notes",
+      "filePath": "main.py",
+      "lineRange": [
+        6188,
+        6230
+      ],
+      "summary": "Handles the get volunteer room notes operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:is_handover_owner",
+      "type": "function",
+      "name": "is_handover_owner",
+      "filePath": "main.py",
+      "lineRange": [
+        7078,
+        7079
+      ],
+      "summary": "Handles the is handover owner operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:clear_all_global_disasters",
+      "type": "function",
+      "name": "clear_all_global_disasters",
+      "filePath": "main.py",
+      "lineRange": [
+        7532,
+        7584
+      ],
+      "summary": "Handles the clear all global disasters operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_ar_norm_words",
+      "type": "function",
+      "name": "_ar_norm_words",
+      "filePath": "main.py",
+      "lineRange": [
+        8143,
+        8151
+      ],
+      "summary": "Handles the ar norm words operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:is_weather_global",
+      "type": "function",
+      "name": "is_weather_global",
+      "filePath": "main.py",
+      "lineRange": [
+        8875,
+        8877
+      ],
+      "summary": "Handles the is weather global operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:weather_finish",
+      "type": "function",
+      "name": "weather_finish",
+      "filePath": "main.py",
+      "lineRange": [
+        9348,
+        9400
+      ],
+      "summary": "Handles the weather finish operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:clear_all_gov_contacts",
+      "type": "function",
+      "name": "clear_all_gov_contacts",
+      "filePath": "main.py",
+      "lineRange": [
+        9839,
+        9882
+      ],
+      "summary": "Handles the clear all gov contacts operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_intel_read_schema_state",
+      "type": "function",
+      "name": "_eq_intel_read_schema_state",
+      "filePath": "main.py",
+      "lineRange": [
+        10236,
+        10258
+      ],
+      "summary": "Handles the eq intel read schema state operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_start_eq_local_engine",
+      "type": "function",
+      "name": "_start_eq_local_engine",
+      "filePath": "main.py",
+      "lineRange": [
+        10903,
+        10921
+      ],
+      "summary": "Handles the start eq local engine operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_world_filled_year_windows",
+      "type": "function",
+      "name": "_eq_world_filled_year_windows",
+      "filePath": "main.py",
+      "lineRange": [
+        11984,
+        12006
+      ],
+      "summary": "Handles the eq world filled year windows operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_forecast_count",
+      "type": "function",
+      "name": "_eq_forecast_count",
+      "filePath": "main.py",
+      "lineRange": [
+        12465,
+        12488
+      ],
+      "summary": "Handles the eq forecast count operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_weather_intel_assessments",
+      "type": "function",
+      "name": "get_weather_intel_assessments",
+      "filePath": "main.py",
+      "lineRange": [
+        13378,
+        13645
+      ],
+      "summary": "Handles the get weather intel assessments operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:main.py:report_client_error",
+      "type": "function",
+      "name": "report_client_error",
+      "filePath": "main.py",
+      "lineRange": [
+        14126,
+        14204
+      ],
+      "summary": "Handles the report client error operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:create_wireless_delivery",
+      "type": "function",
+      "name": "create_wireless_delivery",
+      "filePath": "main.py",
+      "lineRange": [
+        14537,
+        14625
+      ],
+      "summary": "Handles the create wireless delivery operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_require_owner_messages_owner",
+      "type": "function",
+      "name": "_require_owner_messages_owner",
+      "filePath": "main.py",
+      "lineRange": [
+        15194,
+        15197
+      ],
+      "summary": "Handles the require owner messages owner operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:SessionEditRequest",
+      "type": "class",
+      "name": "SessionEditRequest",
+      "filePath": "main.py",
+      "lineRange": [
+        1982,
+        1987
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:HandoverExportModel",
+      "type": "class",
+      "name": "HandoverExportModel",
+      "filePath": "main.py",
+      "lineRange": [
+        7341,
+        7343
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:EqIntelExportModel",
+      "type": "class",
+      "name": "EqIntelExportModel",
+      "filePath": "main.py",
+      "lineRange": [
+        11201,
+        11204
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:WirelessRecipientLookup",
+      "type": "class",
+      "name": "WirelessRecipientLookup",
+      "filePath": "main.py",
+      "lineRange": [
+        14340,
+        14346
+      ],
+      "summary": "Groups related application behavior and state in a reusable class.",
+      "tags": [
+        "class",
+        "backend",
+        "application"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:security_audit_probe.py",
+      "type": "file",
+      "name": "security_audit_probe.py",
+      "filePath": "security_audit_probe.py",
+      "summary": "Runs security-oriented checks against selected application behavior without defining production services.",
+      "tags": [
+        "security",
+        "diagnostic",
+        "verification"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:security_audit_probe.py:uid",
+      "type": "function",
+      "name": "uid",
+      "filePath": "security_audit_probe.py",
+      "lineRange": [
+        32,
+        35
+      ],
+      "summary": "Handles the uid operation in this module.",
+      "tags": [
+        "utility",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:security_audit_probe.py:probe",
+      "type": "function",
+      "name": "probe",
+      "filePath": "security_audit_probe.py",
+      "lineRange": [
+        54,
+        85
+      ],
+      "summary": "Handles the probe operation in this module.",
+      "tags": [
+        "utility",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:set_password.py",
+      "type": "file",
+      "name": "set_password.py",
+      "filePath": "set_password.py",
+      "summary": "Provides a focused administrative password-maintenance helper.",
+      "tags": [
+        "utility",
+        "administration",
+        "security"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:validate_clear_confirmation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:validate_clear_confirmation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_db_unavailable_handler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_db_unavailable_handler",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_login_is_throttled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_login_is_throttled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:validate_mission_completion",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:validate_mission_completion",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:dedupe_participants",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:dedupe_participants",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:participation_start_dt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:participation_start_dt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_mission_by_idempotency",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_mission_by_idempotency",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:remove_draft_session",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:remove_draft_session",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_volunteer_room_notes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_volunteer_room_notes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:is_handover_owner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:is_handover_owner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_global_disasters",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_global_disasters",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_ar_norm_words",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_ar_norm_words",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:is_weather_global",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:is_weather_global",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:weather_finish",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:weather_finish",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_gov_contacts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_gov_contacts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_read_schema_state",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_read_schema_state",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_start_eq_local_engine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_start_eq_local_engine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_world_filled_year_windows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_world_filled_year_windows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_forecast_count",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_forecast_count",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_assessments",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_assessments",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:report_client_error",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:report_client_error",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_wireless_delivery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_wireless_delivery",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_require_owner_messages_owner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_require_owner_messages_owner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:SessionEditRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:SessionEditRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:HandoverExportModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:HandoverExportModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:EqIntelExportModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:EqIntelExportModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessRecipientLookup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessRecipientLookup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:security_audit_probe.py",
+      "target": "function:security_audit_probe.py:uid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:security_audit_probe.py",
+      "target": "function:security_audit_probe.py:uid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:security_audit_probe.py",
+      "target": "function:security_audit_probe.py:probe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:security_audit_probe.py",
+      "target": "function:security_audit_probe.py:probe",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:security_audit_probe.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:security_audit_probe.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:security_audit_probe.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:set_password.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

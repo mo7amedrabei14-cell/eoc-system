@@ -1,0 +1,85 @@
+{
+  "loadMs": 9173,
+  "navigation": [
+    {
+      "domContentLoadedEventEnd": 7373.800000011921,
+      "loadEventEnd": 9154,
+      "transferSize": 1367,
+      "encodedBodySize": 1067
+    }
+  ],
+  "resources": [
+    {
+      "path": "/assets/index-CBRKr4gE.js",
+      "initiatorType": "script",
+      "startTime": 607.3999999761581,
+      "responseEnd": 1456.0999999642372,
+      "duration": 848.6999999880791,
+      "transferSize": 4437,
+      "encodedBodySize": 4137
+    },
+    {
+      "path": "/assets/rolldown-runtime-W7wSyTde.js",
+      "initiatorType": "other",
+      "startTime": 609.5,
+      "responseEnd": 1196.300000011921,
+      "duration": 586.8000000119209,
+      "transferSize": 1279,
+      "encodedBodySize": 979
+    },
+    {
+      "path": "/assets/map-vendor-DAKzUuMp.js",
+      "initiatorType": "other",
+      "startTime": 614.0999999642372,
+      "responseEnd": 3796.199999988079,
+      "duration": 3182.100000023842,
+      "transferSize": 43372,
+      "encodedBodySize": 43072
+    },
+    {
+      "path": "/assets/react-vendor-CmLZwYxA.js",
+      "initiatorType": "other",
+      "startTime": 625.0999999642372,
+      "responseEnd": 4713,
+      "duration": 4087.900000035763,
+      "transferSize": 74072,
+      "encodedBodySize": 73772
+    },
+    {
+      "path": "/assets/apiBase-DSGGbg7P.js",
+      "initiatorType": "other",
+      "startTime": 628,
+      "responseEnd": 1219.699999988079,
+      "duration": 591.6999999880791,
+      "transferSize": 461,
+      "encodedBodySize": 161
+    },
+    {
+      "path": "/assets/map-vendor-CcXJxNtP.css",
+      "initiatorType": "link",
+      "startTime": 631.5,
+      "responseEnd": 1715.5,
+      "duration": 1084,
+      "transferSize": 6623,
+      "encodedBodySize": 6323
+    },
+    {
+      "path": "/assets/index-CWihVeMM.css",
+      "initiatorType": "link",
+      "startTime": 634.5,
+      "responseEnd": 4308.699999988079,
+      "duration": 3674.199999988079,
+      "transferSize": 49444,
+      "encodedBodySize": 49144
+    },
+    {
+      "path": "/assets/App-CJsu5YTT.css",
+      "initiatorType": "link",
+      "startTime": 7355.800000011921,
+      "responseEnd": 9014.800000011921,
+      "duration": 1659,
+      "transferSize": 20392,
+      "encodedBodySize": 20092
+    }
+  ]
+}

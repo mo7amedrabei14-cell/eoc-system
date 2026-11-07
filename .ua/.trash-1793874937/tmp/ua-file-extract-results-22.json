@@ -1,0 +1,1029 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 20,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 20,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 20
+    }
+  },
+  "results": [
+    {
+      "path": "perf/harsh22_before_blocked_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_before_blocked_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_before_blocked_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_before_ready_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_before_ready_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_before_ready_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_before_settled_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_before_settled_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_before_settled_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh22_trace_after.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 103,
+      "nonEmptyLines": 103,
+      "sections": [
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "navigation",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "resources",
+          "level": 1,
+          "line": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "perf/harsh22_trace_before.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 85,
+      "nonEmptyLines": 85,
+      "sections": [
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "navigation",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "resources",
+          "level": 1,
+          "line": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "perf/harsh_after22_login_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh_after22_login_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh_after22_login_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh_before_login_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh_before_login_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/harsh_before_login_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "url",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "loadMs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "lcp",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "requests",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transferKB",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": "perf/lh22_after_blocked_1.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5094,
+      "nonEmptyLines": 5094,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2595
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2652
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2917
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 3001
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 3002
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 3019
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4350
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh22_after_blocked_2.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 4862,
+      "nonEmptyLines": 4862,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2426
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2483
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2748
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2832
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2833
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2850
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4136
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    },
+    {
+      "path": "perf/lh22_after_blocked_3.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 5045,
+      "nonEmptyLines": 5045,
+      "sections": [
+        {
+          "heading": "lighthouseVersion",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "requestedUrl",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "mainDocumentUrl",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "finalDisplayedUrl",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "finalUrl",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "fetchTime",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "gatherMode",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "runWarnings",
+          "level": 1,
+          "line": 9
+        },
+        {
+          "heading": "userAgent",
+          "level": 1,
+          "line": 12
+        },
+        {
+          "heading": "environment",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "audits",
+          "level": 1,
+          "line": 19
+        },
+        {
+          "heading": "configSettings",
+          "level": 1,
+          "line": 2553
+        },
+        {
+          "heading": "categories",
+          "level": 1,
+          "line": 2610
+        },
+        {
+          "heading": "categoryGroups",
+          "level": 1,
+          "line": 2875
+        },
+        {
+          "heading": "stackPacks",
+          "level": 1,
+          "line": 2959
+        },
+        {
+          "heading": "entities",
+          "level": 1,
+          "line": 2960
+        },
+        {
+          "heading": "fullPageScreenshot",
+          "level": 1,
+          "line": 2977
+        },
+        {
+          "heading": "timing",
+          "level": 1,
+          "line": 73
+        },
+        {
+          "heading": "i18n",
+          "level": 1,
+          "line": 4308
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 19
+      }
+    }
+  ]
+}

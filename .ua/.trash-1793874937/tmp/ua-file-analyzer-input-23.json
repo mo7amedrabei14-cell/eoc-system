@@ -1,0 +1,160 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 23,
+  "batchFiles": [
+    {
+      "path": "perf/lh22_after_blocked_4.json",
+      "language": "json",
+      "sizeLines": 5051,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_after_blocked_5.json",
+      "language": "json",
+      "sizeLines": 4866,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_1.json",
+      "language": "json",
+      "sizeLines": 5195,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_2.json",
+      "language": "json",
+      "sizeLines": 5218,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_3.json",
+      "language": "json",
+      "sizeLines": 5130,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_4.json",
+      "language": "json",
+      "sizeLines": 5009,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh22_before_blocked_5.json",
+      "language": "json",
+      "sizeLines": 5098,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_1.json",
+      "language": "json",
+      "sizeLines": 5082,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_2.json",
+      "language": "json",
+      "sizeLines": 4937,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_3.json",
+      "language": "json",
+      "sizeLines": 5050,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_4.json",
+      "language": "json",
+      "sizeLines": 4953,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_after22_login_5.json",
+      "language": "json",
+      "sizeLines": 4914,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_1.json",
+      "language": "json",
+      "sizeLines": 5042,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_2.json",
+      "language": "json",
+      "sizeLines": 5037,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_3.json",
+      "language": "json",
+      "sizeLines": 5045,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_4.json",
+      "language": "json",
+      "sizeLines": 4969,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/lh_before_login_5.json",
+      "language": "json",
+      "sizeLines": 4960,
+      "fileCategory": "config"
+    },
+    {
+      "path": "perf/login_diff22.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    }
+  ],
+  "batchImportData": {
+    "perf/lh22_after_blocked_4.json": [],
+    "perf/lh22_after_blocked_5.json": [],
+    "perf/lh22_before_blocked_1.json": [],
+    "perf/lh22_before_blocked_2.json": [],
+    "perf/lh22_before_blocked_3.json": [],
+    "perf/lh22_before_blocked_4.json": [],
+    "perf/lh22_before_blocked_5.json": [],
+    "perf/lh_after22_login_1.json": [],
+    "perf/lh_after22_login_2.json": [],
+    "perf/lh_after22_login_3.json": [],
+    "perf/lh_after22_login_4.json": [],
+    "perf/lh_after22_login_5.json": [],
+    "perf/lh_before_login_1.json": [],
+    "perf/lh_before_login_2.json": [],
+    "perf/lh_before_login_3.json": [],
+    "perf/lh_before_login_4.json": [],
+    "perf/lh_before_login_5.json": [],
+    "perf/login_diff22.json": []
+  },
+  "neighborMap": {}
+}

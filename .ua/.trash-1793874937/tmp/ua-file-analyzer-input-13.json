@@ -1,0 +1,48 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 13,
+  "batchFiles": [
+    {
+      "path": "migrations/migrations/20261017_wireless_handover.sql",
+      "language": "sql",
+      "sizeLines": 56,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/migrations/20261018_wireless_handover_v2.sql",
+      "language": "sql",
+      "sizeLines": 94,
+      "fileCategory": "data"
+    }
+  ],
+  "batchImportData": {
+    "migrations/migrations/20261017_wireless_handover.sql": [],
+    "migrations/migrations/20261018_wireless_handover_v2.sql": []
+  },
+  "neighborMap": {}
+}

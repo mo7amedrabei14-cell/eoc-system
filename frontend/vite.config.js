@@ -26,13 +26,17 @@ export default defineConfig({
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
-        // Vite 8 / Rolldown: manualChunks يجب أن يكون Function
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return undefined;
-          if (id.includes('react-dom') || id.includes('react-router') || /\breact\b/.test(id)) return 'react-vendor';
-          if (id.includes('/leaflet/') || id.includes('react-leaflet')) return 'map-vendor';
-          if (id.includes('/xlsx/')) return 'xlsx';
-          return 'vendor';
+        strictExecutionOrder: true,
+        codeSplitting: {
+          includeDependenciesRecursively: false,
+          groups: [
+            { name: 'react-vendor', test: /node_modules[\\/](?:react|react-dom|scheduler|react-router|react-router-dom)[\\/]/, priority: 40 },
+            { name: 'map-vendor', test: /node_modules[\\/](?:leaflet|react-leaflet|@react-leaflet)[\\/]/, priority: 30 },
+            { name: 'exceljs', test: /node_modules[\\/]exceljs[\\/]/, priority: 30 },
+            { name: 'jszip', test: /node_modules[\\/]jszip[\\/]/, priority: 30 },
+            { name: 'xlsx', test: /node_modules[\\/]xlsx[\\/]/, priority: 30 },
+            { name: 'vendor', test: /node_modules/, priority: 10 },
+          ],
         },
       },
     },
