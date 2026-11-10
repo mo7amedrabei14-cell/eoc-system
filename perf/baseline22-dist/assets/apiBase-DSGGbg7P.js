@@ -1,1 +1,1 @@
-var e={BASE_URL:`/`,DEV:!1,MODE:`production`,PROD:!0,SSR:!1},t=e.VITE_API_BASE===void 0?e.DEV?``:`https://eoc-system-omega.vercel.app`:e.VITE_API_BASE;export{t};
+var e={BASE_URL:`/`,DEV:!1,MODE:`production`,PROD:!0,SSR:!1},t=e.VITE_API_BASE===void 0?e.DEV?``:`https://eoc-system-dun.vercel.app`:e.VITE_API_BASE;export{t};

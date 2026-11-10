@@ -4178,7 +4178,7 @@
         },
         {
           "caller": "HomeView",
-          "callee": "Promise.all([\r\n      fetch('https://eoc-system-omega.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),\r\n      fetch('https://eoc-system-omega.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),\r\n      fetch('https://eoc-system-omega.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),\r\n      fetch('https://eoc-system-omega.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),\r\n      fetch('https://eoc-system-omega.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])\r\n    ]).then",
+          "callee": "Promise.all([\r\n      fetch('https://eoc-system-dun.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),\r\n      fetch('https://eoc-system-dun.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),\r\n      fetch('https://eoc-system-dun.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),\r\n      fetch('https://eoc-system-dun.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),\r\n      fetch('https://eoc-system-dun.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])\r\n    ]).then",
           "lineNumber": 1273
         },
         {
@@ -4188,7 +4188,7 @@
         },
         {
           "caller": "HomeView",
-          "callee": "fetch('https://eoc-system-omega.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then",
+          "callee": "fetch('https://eoc-system-dun.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then",
           "lineNumber": 1274
         },
         {
@@ -4203,7 +4203,7 @@
         },
         {
           "caller": "HomeView",
-          "callee": "fetch('https://eoc-system-omega.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then",
+          "callee": "fetch('https://eoc-system-dun.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then",
           "lineNumber": 1275
         },
         {
@@ -4218,7 +4218,7 @@
         },
         {
           "caller": "HomeView",
-          "callee": "fetch('https://eoc-system-omega.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then",
+          "callee": "fetch('https://eoc-system-dun.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then",
           "lineNumber": 1276
         },
         {
@@ -4233,7 +4233,7 @@
         },
         {
           "caller": "HomeView",
-          "callee": "fetch('https://eoc-system-omega.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then",
+          "callee": "fetch('https://eoc-system-dun.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then",
           "lineNumber": 1277
         },
         {
@@ -4248,7 +4248,7 @@
         },
         {
           "caller": "HomeView",
-          "callee": "fetch('https://eoc-system-omega.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then",
+          "callee": "fetch('https://eoc-system-dun.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then",
           "lineNumber": 1278
         },
         {
@@ -7098,17 +7098,17 @@
         },
         {
           "caller": "AuditLogsView",
-          "callee": "fetch('https://eoc-system-omega.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })\r\n      .then(res => res.ok ? res.json() : [])\r\n      .then(data => { setLogs(data); setIsLoading(false); })\r\n      .catch",
+          "callee": "fetch('https://eoc-system-dun.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })\r\n      .then(res => res.ok ? res.json() : [])\r\n      .then(data => { setLogs(data); setIsLoading(false); })\r\n      .catch",
           "lineNumber": 2749
         },
         {
           "caller": "AuditLogsView",
-          "callee": "fetch('https://eoc-system-omega.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })\r\n      .then(res => res.ok ? res.json() : [])\r\n      .then",
+          "callee": "fetch('https://eoc-system-dun.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })\r\n      .then(res => res.ok ? res.json() : [])\r\n      .then",
           "lineNumber": 2749
         },
         {
           "caller": "AuditLogsView",
-          "callee": "fetch('https://eoc-system-omega.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })\r\n      .then",
+          "callee": "fetch('https://eoc-system-dun.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })\r\n      .then",
           "lineNumber": 2749
         },
         {

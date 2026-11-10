@@ -743,7 +743,7 @@
             "entity": "127.0.0.1"
           },
           {
-            "url": "https://eoc-system-omega.vercel.app/api/health?t=1793803075886",
+            "url": "https://eoc-system-dun.vercel.app/api/health?t=1793803075886",
             "sessionTargetType": "page",
             "protocol": "h2",
             "cache": "none",
@@ -871,7 +871,7 @@
         ],
         "items": [
           {
-            "origin": "https://eoc-system-omega.vercel.app",
+            "origin": "https://eoc-system-dun.vercel.app",
             "rtt": 29.524999999999977
           },
           {
@@ -910,7 +910,7 @@
         ],
         "items": [
           {
-            "origin": "https://eoc-system-omega.vercel.app",
+            "origin": "https://eoc-system-dun.vercel.app",
             "serverResponseTime": 1069.232
           },
           {
@@ -2490,7 +2490,7 @@
               "type": "subitems",
               "items": [
                 {
-                  "url": "https://eoc-system-omega.vercel.app/api/health?t=1793803075886",
+                  "url": "https://eoc-system-dun.vercel.app/api/health?t=1793803075886",
                   "mainThreadTime": 0,
                   "transferSize": 624
                 }
@@ -2963,7 +2963,7 @@
     {
       "name": "vercel.app",
       "origins": [
-        "https://eoc-system-omega.vercel.app"
+        "https://eoc-system-dun.vercel.app"
       ],
       "isUnrecognized": true
     }

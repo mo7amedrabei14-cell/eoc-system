@@ -730,7 +730,7 @@
             "entity": "localhost"
           },
           {
-            "url": "https://eoc-system-omega.vercel.app/api/health?t=1793980744113",
+            "url": "https://eoc-system-dun.vercel.app/api/health?t=1793980744113",
             "sessionTargetType": "page",
             "protocol": "",
             "cache": "none",
@@ -2420,7 +2420,7 @@
     "ignoreStatusCode": false,
     "locale": "en-US",
     "blockedUrlPatterns": [
-      "*://eoc-system-omega.vercel.app/*"
+      "*://eoc-system-dun.vercel.app/*"
     ],
     "additionalTraceCategories": null,
     "extraHeaders": null,
@@ -2793,7 +2793,7 @@
     {
       "name": "vercel.app",
       "origins": [
-        "https://eoc-system-omega.vercel.app"
+        "https://eoc-system-dun.vercel.app"
       ],
       "isUnrecognized": true
     }
